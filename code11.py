@@ -202,58 +202,7 @@ AST = NumLiteral | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assig
 
 
 Value = Fraction | bool | str
-
-# Type check
-def typecheck(program: AST, env = None) -> AST:
-    print("program: ",program)
-    match program:
-        case NumLiteral() as t: # already typed.
-            return t
-        case BoolLiteral() as t: # already typed.
-            return t
-        case StringLiteral() as t:
-            return t
-        case Variable() as t:
-            print("t",t)
-            return t
-        case BinOp(op, left, right) if op in "+*-/":
-            print("yes", left)
-            print("no", right)
-
-            tleft = typecheck(left)
-            tright = typecheck(right)
-            print("(",tleft.type," ", tright.type,")")
-            if tleft.type != NumType() or tright.type != NumType():
-                raise TypeError()
-            return BinOp(op, left, right, NumType())
-        case BinOp("<", left, right):
-            tleft = typecheck(left)
-            tright = typecheck(right)
-            if tleft.type != NumType() or tright.type != NumType():
-                raise TypeError()
-            return BinOp("<", left, right, BoolType())
-        case BinOp("=", left, right):
-            tleft = typecheck(left)
-            tright = typecheck(right)
-            if tleft.type != tright.type:
-                raise TypeError()
-            return BinOp("=", left, right, BoolType())
-        case if_else(c, t, f): # We have to typecheck both branches.
-            tc = typecheck(c)
-            if tc.type != BoolType():
-                raise TypeError()
-            tt = typecheck(t)
-            tf = typecheck(f)
-            if tt.type != tf.type: # Both branches must have the same type.
-                raise TypeError()
-            return if_else(tc, tt, tf, tt.type) # The common type becomes the type of the if-else.
-    raise TypeError()
-
-
-
-#typecheck end
-
-
+#environment begin
 
 class Environment:
     env: List
@@ -268,11 +217,16 @@ class Environment:
         assert self.env
         self.env.pop()
 
-    def add(self,name,value):
+    def add(self,name,value,tname):
         assert name not in self.env[-1]
         self.env[-1][name]=value
-
-
+        self.env[-1][name]=tname.type
+        # print(" hello ",Variable(name))
+        # t=Variable(name)
+        # t.type=tname.type
+        # print(" hello123 ",Variable(name))
+        # print(" hello654 ",tname.type)
+        # print(" hello001 ",t.type)
     def check(self,name):
         for dict in reversed(self.env):
             if name in dict:
@@ -300,6 +254,75 @@ class Environment:
         raise KeyError()
 
     
+#environment ends
+
+
+# Type check
+def typecheck(program: AST, environment: Environment = None) -> AST:
+    print("program: ",program)
+    match program:
+        case NumLiteral() as t: # already typed.
+            return t
+        case BoolLiteral() as t: # already typed.
+            return t
+        case StringLiteral() as t:
+            return t
+        case Variable(name):
+            t1=environment.get(name)
+            tname=Variable(name)
+            tname.type=t1
+            return tname
+        case BinOp(op, left, right) if op in "+*-/":
+            print("yes", left)
+            print("no", right)
+
+            tleft = typecheck(left)
+            tright = typecheck(right)
+            print("(",tleft.type," ", tright.type,")")
+            if tleft.type != NumType() or tright.type != NumType():
+                raise TypeError()
+            return BinOp(op, left, right, NumType())
+        case BinOp("<", left, right):
+            tleft = typecheck(left)
+            tright = typecheck(right)
+            if tleft.type != NumType() or tright.type != NumType():
+                raise TypeError()
+            return BinOp("<", tleft, tright, BoolType())
+        case BinOp("=", left, right):
+            tleft = typecheck(left)
+            tright = typecheck(right)
+            if tleft.type != tright.type:
+                raise TypeError()
+            return BinOp("=", tleft, tright, BoolType())
+        case if_else(c, t, f): # We have to typecheck both branches.
+            tc = typecheck(c)
+            if tc.type != BoolType():
+                raise TypeError()
+            tt = typecheck(t)
+            tf = typecheck(f)
+            if tt.type != tf.type: # Both branches must have the same type.
+                raise TypeError()
+            return if_else(tc, tt, tf, tt.type) # The common type becomes the type of the if-else.
+        case Let(Variable(name),exp1,exp2):
+            
+            tname=Variable(name)
+            v1=typecheck(exp1)
+            tname.type=v1.type
+            environment.enter_scope()
+            environment.add(name,tname.type)
+            v2=typecheck(exp2)
+            environment.exit_scope()
+            v3=Let(tname,v1,v2,v2.type)
+            return v3
+        
+            t1.type=tname.type
+    raise TypeError()
+
+
+
+#typecheck end
+
+
 
 
 
@@ -359,7 +382,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
             print("second")
             print(typecheck(e1).type)
             print('third')
-            environment.add(name,v1)
+            environment.add(name,v1,tname)
             v2=eval_(e2)
             environment.exit_scope()
             return v2

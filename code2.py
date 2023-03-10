@@ -61,7 +61,7 @@ class EndOfTokens(Exception):
 
 
 keywords = "if then else end while do done let is in letMut letAnd and seq anth put get printing ".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠".split()
+symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ; == %".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
 
@@ -211,7 +211,7 @@ class Parser:
         lst=[]
         e1=self.parse_expr()
         lst.append(e1)
-        self.lexer.match(Keyword("anth"))
+        self.lexer.match(Operator(";"))
         e2=self.parse_expr()
         lst.append(e2)
         self.lexer.match(Keyword("end"))
@@ -266,12 +266,13 @@ class Parser:
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
+    
 
     def parse_mult(self):
         left = self.parse_atom()
         while True:
             match self.lexer.peek_token():
-                case Operator(op) if op in "*/":
+                case Operator(op) if op in "*/%":
                     self.lexer.advance()
                     m = self.parse_atom()
                     left = BinOp(op, left, m)
@@ -294,7 +295,7 @@ class Parser:
     def parse_cmp(self):
         left = self.parse_add()
         match self.lexer.peek_token():
-            case Operator(op) if op in "<>":
+            case Operator(op) if op in "<>==":
                 self.lexer.advance()
                 right = self.parse_add()
                 return BinOp(op, left, right)
@@ -376,6 +377,7 @@ class BinOp:
 @dataclass
 class Variable:
     name: str
+    type: Optional[SimType] = None
 
 
 @dataclass
@@ -389,6 +391,7 @@ class Let:
     var: 'AST'
     e1: 'AST'
     e2: 'AST'
+    type: Optional[SimType] = None
 
 @dataclass
 class BoolLiteral:
@@ -408,6 +411,7 @@ class if_else:
 class while_loop:
     condition: 'AST'
     body: 'AST'
+    type: Optional[SimType] = None
 
 
 @dataclass
@@ -417,12 +421,14 @@ class for_loop:
     condition: 'AST'
     updt: 'AST'
     body: 'AST'
+    type: Optional[SimType] = None
 
 
 @dataclass
 class Two_Str_concatenation:
     str1: 'AST'
     str2: 'AST'
+    type: Optional[SimType] = None
 
 @dataclass
 
@@ -430,6 +436,7 @@ class Str_slicing:
     str1: 'AST'
     start: 'AST'
     end: 'AST'
+    type: Optional[SimType] = None
 
 
 @dataclass
@@ -437,32 +444,38 @@ class LetMut:
     var: 'AST'
     e1: 'AST'
     e2: 'AST'
+    type: Optional[SimType] = None
 
 
 @dataclass
 class Seq:
     body: List['AST']
+    type: Optional[SimType] = None
 
 
 @dataclass
 class Put:
     var: 'AST'
     e1: 'AST'
+    type: Optional[SimType] = None
 
 @dataclass
 
 class Assign:
     var: 'AST'
     e1: 'AST'
+    type: Optional[SimType] = None
 
 @dataclass
 
 class Get:
     var: 'AST'
+    type: Optional[SimType] = None
 
 @dataclass
 class Print:
     e1: 'AST'
+    type: Optional[SimType] = None
 
 @dataclass
 class LetFun:
@@ -470,16 +483,19 @@ class LetFun:
     params:List['AST']
     body:'AST'
     expr:'AST'
+    type: Optional[SimType] = None
 
 @dataclass
 class FunCall:
     fn:'AST'
     args: List['AST']
+    type: Optional[SimType] = None
 
 @dataclass
 class FnObject:
     params: List['AST']
     body: 'AST'
+    type: Optional[SimType] = None
 
 @dataclass
 class LetAnd:
@@ -488,9 +504,11 @@ class LetAnd:
     var2:'AST'
     expr2:'AST'
     expr3:'AST'
+    type: Optional[SimType] = None
 @dataclass
 class UBoolOp:
     expr: 'AST' 
+    type: Optional[SimType] = None
 
 AST = NumLiteral |BoolLiteral | StringLiteral | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd
 # TypedAST = NewType('TypedAST', AST)
@@ -675,6 +693,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return eval_(left) * eval_(right)
         case BinOp("/", left, right):
             return eval_(left) / eval_(right)
+        case BinOp("%", left, right):
+            return eval_(left) % eval_(right)
         case BinOp(">",left,right):
             return eval_(left) > eval_(right)
         case BinOp("<", left,right):
@@ -693,21 +713,21 @@ def eval(program: AST, environment: Environment = None) -> Value:
             environment.enter_scope()
             vcond = eval_(condition)
             while(vcond):
-                eval_(e1) 
+                v5=eval_(e1) 
                 vcond=eval_(condition)
             environment.exit_scope()
-            return None
+            return v5
 
         case for_loop(Variable(name),e1,condition,updt,body):
             environment.enter_scope()
             environment.add(name,eval_(e1))
             vcond=eval_(condition)
             while(vcond):
-                eval_(body)
+                v1=eval_(body)
                 eval_(updt)
                 vcond=eval_(condition)    
             environment.exit_scope()
-            return None
+            return v1
         
         case Print(e1):
             v1=eval_(e1)
@@ -721,8 +741,11 @@ def eval(program: AST, environment: Environment = None) -> Value:
 
 
 
-# Since we don't have variables, environment is not needed.
-def typecheck(program: AST, env = None) -> AST:
+def typecheck(program: AST, environment: Environment = None) -> AST:
+    if environment is None:
+        environment = Environment()
+    def typecheck_(program):
+        return typecheck(program, environment)
     match program:
         case NumLiteral() as t: # already typed.
             return t
@@ -730,38 +753,73 @@ def typecheck(program: AST, env = None) -> AST:
             return t
         case StringLiteral() as t:
             return t
+        case Variable(name):
+            t1=environment.get(name)
+            tname=Variable(name)
+            tname.type=t1
+            return tname
+        case Put(Variable(name),e1):
+            v1=typecheck_(e1)
+            t1=environment.get(name)
+            print("v1 ", v1)
+            print("t1 ",t1)
+            tname=Variable(name)
+            tname.type=t1
+            v2=Put(tname,v1)
+            return v2
         case BinOp(op, left, right) if op in "+*-/":
-            tleft = typecheck(left)
-            tright = typecheck(right)
+            tleft = typecheck_(left)
+            tright = typecheck_(right)
             if tleft.type != NumType() or tright.type != NumType():
                 raise TypeError()
-            return BinOp(op, left, right, NumType())
+            return BinOp(op, tleft, tright, NumType())
         case BinOp("<", left, right):
-            tleft = typecheck(left)
-            tright = typecheck(right)
+            tleft = typecheck_(left)
+            tright = typecheck_(right)
             if tleft.type != NumType() or tright.type != NumType():
                 raise TypeError()
-            return BinOp("<", left, right, BoolType())
+            return BinOp("<", tleft, tright, BoolType())
+        case BinOp(">", left, right):
+            tleft = typecheck_(left)
+            tright = typecheck_(right)
+            if tleft.type != NumType() or tright.type != NumType():
+                raise TypeError()
+            return BinOp(">", tleft, tright, BoolType())
+        case BinOp("==", left, right):
+            tleft = typecheck_(left)
+            tright = typecheck_(right)
+            if tleft.type != NumType() or tright.type != NumType():
+                raise TypeError()
+            return BinOp("==", tleft, tright, BoolType())
         case BinOp("=", left, right):
-            tleft = typecheck(left)
-            tright = typecheck(right)
+            tleft = typecheck_(left)
+            tright = typecheck_(right)
             if tleft.type != tright.type:
                 raise TypeError()
-            return BinOp("=", left, right, BoolType())
+            return BinOp("=", tleft, tright, BoolType())
         case if_else(c, t, f): # We have to typecheck both branches.
-            tc = typecheck(c)
+            tc = typecheck_(c)
             if tc.type != BoolType():
                 raise TypeError()
-            tt = typecheck(t)
-            tf = typecheck(f)
+            tt = typecheck_(t)
+            tf = typecheck_(f)
             if tt.type != tf.type: # Both branches must have the same type.
                 raise TypeError()
             return if_else(tc, tt, tf, tt.type) # The common type becomes the type of the if-else.
+        case Let(Variable(name),exp1,exp2) | LetMut(Variable(name),exp1,exp2):
+            tname=Variable(name)
+            v1=typecheck_(exp1)
+            tname.type=v1.type
+            environment.enter_scope()
+            environment.add(name,tname.type)
+            v2=typecheck_(exp2)
+            environment.exit_scope()
+            v3=Let(tname,v1,v2,v2.type)
+            return v3
     raise TypeError()
 
 def test_typecheck():
     import pytest
-    
     te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
     print("te: ",te)
     assert te.type == NumType()
@@ -781,7 +839,11 @@ def test_parse():
         )
     x=input()
     y=parse(x)
-    print("y ",eval(y))
+    print("y-> ",y)
+    z=typecheck(y)
+    print("z-> ",z)
+    print("ans-> ",eval(z))
+    print(z.type)
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
     # print(parse("if a+b > 2*d then a*b - c + d else e*f/g end"))
     # print(parse("if 10*5 > 6*6 then 10*5 else 6*6 end"))
@@ -797,3 +859,202 @@ def test_parse():
 # test_parse() # Uncomment to see the created ASTs.
 print("parse  ",test_parse())
 # print(test_typecheck())
+
+def test_eval():
+    e1 = NumLiteral(2)
+    e2 = NumLiteral(7)
+    e3 = NumLiteral(9)
+    e4 = NumLiteral(5)
+    e5 = BinOp("+", e2, e3)      
+    e6 = BinOp("/", e5, e4)
+    e7 = BinOp("*", e1, e6)
+    assert eval(e7) == Fraction(32, 5)
+
+# def test_string_slicing():
+#     str1 = StringLiteral("abcdefg")
+#     start = NumLiteral(0)
+#     end = NumLiteral(4)
+#     expr = Str_slicing(str1,start,end)
+#     assert eval(expr) == 'abcd'
+
+
+def test_let_eval():
+    a  = Variable("a")
+    e1 = NumLiteral(5)
+    e2 = BinOp("+", a, a)
+    e  = Let(a, e1, e2)
+    assert eval(e) == 10
+    e  = Let(a, e1, Let(a, e2, e2))
+    assert eval(e) == 20
+    e  = Let(a, e1, BinOp("+", a, Let(a, e2, e2)))
+    assert eval(e) == 25
+    e  = Let(a, e1, BinOp("+", Let(a, e2, e2), a))
+    assert eval(e) == 25
+    e3 = NumLiteral(6); 
+    e  = BinOp("+", Let(a, e1, e2), Let(a, e3, e2))
+    assert eval(e) == 22
+
+def test_letmut():
+    # a = Variable("a")
+    b = Variable("b")
+    e1 = LetMut(b, NumLiteral(2), Put(b, BinOp("+",Get(b), NumLiteral(1))))
+    # e2 = LetMut(a, NumLiteral(1), Seq([e1, Get(a)]))
+    assert eval(e1) == 3
+
+
+
+def test_while_eval():
+    a = Variable("a")
+    e1=NumLiteral(10)
+    e2 = LetMut(a, NumLiteral(2), while_loop(BinOp("<",Get(a),e1),Put(a, BinOp("+", Get(a), NumLiteral(2)))) )
+    assert eval(e2)==None
+
+
+def test_if_else_eval():
+    e1=NumLiteral(10)
+    e2=NumLiteral(5)
+    e3=NumLiteral(6)
+    e4=NumLiteral(6)
+    e5=BinOp("*",e2,e1)
+    e6=BinOp("*",e3,e4)
+    e7=BinOp(">",e5,e6)
+    e10=if_else(e7,e5,e6)
+    print(e10)
+    assert eval(e10) == 50
+
+def test_letmut_eg1():
+    a=Variable("a")
+    e1=NumLiteral(5)
+    e2=LetMut(a,e1,Put(a,BinOp("+",Get(a),NumLiteral(6))))
+    assert eval(e2)==11
+
+
+def test_letmut_eg2():
+    a=Variable("a")
+    e1=NumLiteral(5)
+    b=Variable("b")
+    e2=NumLiteral(4)
+    e3=Put(a,BinOp("+",Get(a),Get(b)))
+    e4=Put(b,BinOp("+",Get(a),Get(b)))
+    e5=LetMut(b,e2,Seq([e3,e4]))
+    e6=LetMut(a,e1,Seq([e5,Get(a)]))
+    assert eval(e6)==9
+
+
+def test_while_eval():
+    a = Variable("a")
+    e1=NumLiteral(10)
+    e2 = LetMut(a, NumLiteral(2), while_loop(BinOp("<",Get(a),e1),Put(a, BinOp("+", Get(a), NumLiteral(2)))) )
+    print(eval(e2))
+    assert eval(e2)==10
+
+def test_for_eval():
+    a = Variable("a")
+    e1=NumLiteral(10)
+    i=Variable("i")
+    e2=NumLiteral(0)
+    e3=Put(i,BinOp("+",Get(i),NumLiteral(1)))
+    e4=Put(a,BinOp("+",Get(i),Get(a)))
+    e5=LetMut(a,e1, for_loop(i,e2,BinOp(">",e1,Get(i)),e3,e4))
+    print(eval(e5))
+    assert eval(e5)==55
+
+
+def test_print():
+    a=Variable("a")
+    e1=NumLiteral(5)
+    e2=LetMut(a,e1,Put(a,BinOp("+",Get(a),NumLiteral(6))))
+    e3=Print(e2)
+    assert eval(e3)==11
+
+def test_str_concatenation():
+    str1 = StringLiteral("ab")
+    str2 = StringLiteral("cd")
+    expr = Two_Str_concatenation(str1,str2)
+    assert eval(expr) == 'abcd'
+
+
+
+# print(test_eval())
+# print(test_if_else_eval())
+# print(test_let_eval())
+# print(test_letmut_eg1())
+# print(test_letmut_eg2())
+# print(test_print())
+# print(test_letmut())
+# print(test_while_eval())
+
+def test_Letfun1():
+    a=Variable('a')
+    b=Variable('b')
+    f=Variable('f')
+    e=LetFun(f,[a,b],BinOp("+",a,b),FunCall(f,[NumLiteral(15),NumLiteral(2)]))
+    assert eval(e)==17 
+
+def test_Letfun2():
+    a = Variable("a")
+    b = Variable("b")
+    f = Variable("f")
+    g = BinOp (
+        "*",
+        FunCall(f, [NumLiteral(15), NumLiteral(2)]),
+        FunCall(f, [NumLiteral(12), NumLiteral(3)])
+    )
+    e = LetFun(
+        f, [a, b], BinOp("+", a, b),
+        g
+    )
+    assert eval(e) == (15+2)*(12+3)
+
+def test_LetAnd():
+    a=Variable('a')
+    b=Variable('b')
+    e1=NumLiteral(5)
+    e2=BinOp("+",a,NumLiteral(1))
+    e3=BinOp("+",a,b)
+    e4=LetMut(a,e1,LetAnd(a,NumLiteral(3),b,e2,e3)) 
+    assert eval(e4)==9
+
+def test_UBoolOp1():
+    a=Variable("a")
+    e1=NumLiteral(0)
+    e3=UBoolOp(e1)
+    assert eval(e3)==False
+
+def test_UBoolOp2():
+    e1=StringLiteral("")
+    e3=UBoolOp(e1)
+    print(eval(e3))
+    assert eval(e3)==False
+
+def test_typecheck():
+    t1=BinOp("-",NumLiteral(5),NumLiteral(3))
+    t2=BinOp("+",t1,NumLiteral(2))
+    t3=typecheck(t2)
+    print("t2: ",t2)
+    print("t3: ",t3)
+    assert t3.type == NumType()
+
+def test_typecheck1():
+    t1=BinOp("-",NumLiteral(5),NumLiteral(3))
+    t2=BinOp("+",t1,NumLiteral(2))
+    t3=typecheck(t2)
+    print("t2: ",t2)
+    print("t3: ",t3)
+    assert t3.type == NumType()
+
+# print("test_eval(): ",test_eval())
+# print("test_if_else_eval(): ", test_if_else_eval())
+# print("test_let_eval(): ",test_let_eval())
+# print("test_letmut_eg1(): ",test_letmut_eg1())
+# print("test_letmut_eg2(): ",test_letmut_eg2())
+# print("test_print(): ",test_print())
+# print("test_letmut(): ",test_letmut())
+# print("test_while_eval(): ",test_while_eval())
+# print("test_for_eval(): ",test_for_eval())
+# print("test_Letfun1(): ",test_Letfun1())
+# print("test_Letfun2(): ",test_Letfun2())
+# print("test_LetAnd(): ",test_LetAnd())
+# print("test_UBoolOp1(): ",test_UBoolOp1())
+# print("test_UBoolOp2(): ",test_UBoolOp2())
+# print("test_typecheck(): ",test_typecheck())
