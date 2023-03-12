@@ -46,20 +46,14 @@ class BinOp:
     # below are kind of two no. to be added
     left: 'AST'
     right: 'AST'
+
     type: Optional[SimType] = None
-
-
 
 
 @dataclass
 class Variable:
     name: str
-    type: Optional[SimType] = None
 
-@dataclass
-class StringLiteral:
-    word : str 
-    type: SimType = StringType()
 
 
 @dataclass
@@ -67,7 +61,6 @@ class Let:
     var: 'AST'
     e1: 'AST'
     e2: 'AST'
-    type: Optional[SimType] = None
 
 @dataclass
 class BoolLiteral:
@@ -87,7 +80,6 @@ class if_else:
 class while_loop:
     condition: 'AST'
     body: 'AST'
-    type: Optional[SimType] = None
 
 
 @dataclass
@@ -97,14 +89,12 @@ class for_loop:
     condition: 'AST'
     updt: 'AST'
     body: 'AST'
-    type: Optional[SimType] = None
 
 
 @dataclass
 class Two_Str_concatenation:
     str1: 'AST'
     str2: 'AST'
-    type: Optional[SimType] = None
 
 @dataclass
 
@@ -112,7 +102,6 @@ class Str_slicing:
     str1: 'AST'
     start: 'AST'
     end: 'AST'
-    type: Optional[SimType] = None
 
 
 @dataclass
@@ -120,44 +109,37 @@ class LetMut:
     var: 'AST'
     e1: 'AST'
     e2: 'AST'
-    type: Optional[SimType] = None
 
 
 @dataclass
 class Seq:
     body: List['AST']
-    type: Optional[SimType] = None
 
 @dataclass
 class LetMut:
     var: 'AST'
     e1: 'AST'
     e2: 'AST'
-    type: Optional[SimType] = None
 
 @dataclass
 class Put:
     var: 'AST'
     e1: 'AST'
-    type: Optional[SimType] = None
 
 @dataclass
 
 class Assign:
     var: 'AST'
     e1: 'AST'
-    type: Optional[SimType] = None
 
 @dataclass
 
 class Get:
     var: 'AST'
-    type: Optional[SimType] = None
 
 @dataclass
 class Print:
     e1: 'AST'
-    type: Optional[SimType] = None
 
 @dataclass
 class LetFun:
@@ -165,19 +147,16 @@ class LetFun:
     params:List['AST']
     body:'AST'
     expr:'AST'
-    type: Optional[SimType] = None
 
 @dataclass
 class FunCall:
     fn:'AST'
     args: List['AST']
-    type: Optional[SimType] = None
 
 @dataclass
 class FnObject:
     params: List['AST']
     body: 'AST'
-    type: Optional[SimType] = None
 
 @dataclass
 class LetAnd:
@@ -186,23 +165,10 @@ class LetAnd:
     var2:'AST'
     expr2:'AST'
     expr3:'AST'
-    type: Optional[SimType] = None
 @dataclass
 class UBoolOp:
-    expr: 'AST'
-    type: Optional[SimType] = None
-     
+    expr: 'AST' 
 
-AST = NumLiteral | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp
-
-
-
-# The AST type is defined as a union of several classes, including NumLiteral, BinOp, Variable, Let, and If_else.
-
-
-
-Value = Fraction | bool | str
-#environment begin
 
 class Environment:
     env: List
@@ -217,16 +183,10 @@ class Environment:
         assert self.env
         self.env.pop()
 
-    def add(self,name,value,tname):
+    def add(self,name,value):
         assert name not in self.env[-1]
         self.env[-1][name]=value
-        self.env[-1][name]=tname.type
-        # print(" hello ",Variable(name))
-        # t=Variable(name)
-        # t.type=tname.type
-        # print(" hello123 ",Variable(name))
-        # print(" hello654 ",tname.type)
-        # print(" hello001 ",t.type)
+
     def check(self,name):
         for dict in reversed(self.env):
             if name in dict:
@@ -240,90 +200,26 @@ class Environment:
                 return dict[name]
         raise KeyError()
     
-    def update(self,name,value,value_type):
-        tname=Variable(name)
+    def update(self,name,value):
+
         for dict in reversed(self.env):
             if name in dict:
-                if typecheck(tname).type==value_type:
-                    dict[name]=value
-                    return
-                else:
-                    print("error")
-                    return
+                dict[name]=value
+                return
 
         raise KeyError()
 
     
-#environment ends
 
-
-# Type check
-def typecheck(program: AST, environment: Environment = None) -> AST:
-    print("program: ",program)
-    match program:
-        case NumLiteral() as t: # already typed.
-            return t
-        case BoolLiteral() as t: # already typed.
-            return t
-        case StringLiteral() as t:
-            return t
-        case Variable(name):
-            t1=environment.get(name)
-            tname=Variable(name)
-            tname.type=t1
-            return tname
-        case BinOp(op, left, right) if op in "+*-/":
-            print("yes", left)
-            print("no", right)
-
-            tleft = typecheck(left)
-            tright = typecheck(right)
-            print("(",tleft.type," ", tright.type,")")
-            if tleft.type != NumType() or tright.type != NumType():
-                raise TypeError()
-            return BinOp(op, left, right, NumType())
-        case BinOp("<", left, right):
-            tleft = typecheck(left)
-            tright = typecheck(right)
-            if tleft.type != NumType() or tright.type != NumType():
-                raise TypeError()
-            return BinOp("<", tleft, tright, BoolType())
-        case BinOp("=", left, right):
-            tleft = typecheck(left)
-            tright = typecheck(right)
-            if tleft.type != tright.type:
-                raise TypeError()
-            return BinOp("=", tleft, tright, BoolType())
-        case if_else(c, t, f): # We have to typecheck both branches.
-            tc = typecheck(c)
-            if tc.type != BoolType():
-                raise TypeError()
-            tt = typecheck(t)
-            tf = typecheck(f)
-            if tt.type != tf.type: # Both branches must have the same type.
-                raise TypeError()
-            return if_else(tc, tt, tf, tt.type) # The common type becomes the type of the if-else.
-        case Let(Variable(name),exp1,exp2):
-            
-            tname=Variable(name)
-            v1=typecheck(exp1)
-            tname.type=v1.type
-            environment.enter_scope()
-            environment.add(name,tname.type)
-            v2=typecheck(exp2)
-            environment.exit_scope()
-            v3=Let(tname,v1,v2,v2.type)
-            return v3
-        
-            t1.type=tname.type
-    raise TypeError()
+AST = NumLiteral | BinOp | Variable | Let | if_else | LetMut | LetAnd |Put | Get | Assign |Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp
 
 
 
-#typecheck end
+# The AST type is defined as a union of several classes, including NumLiteral, BinOp, Variable, Let, and If_else.
 
 
 
+Value = Fraction | bool | str
 
 
 # The InvalidProgram exception is defined. This exception will be raised when an invalid program is encountered during evaluation.
@@ -333,12 +229,53 @@ class InvalidProgram(Exception):
 # environment is a mapping of variable names to their values and is used to keep track of the state of the program during evaluation. 
 # The function returns the final value of the program.
 
+# Type check
+def typecheck(program: AST, env = None) -> AST:
+    match program:
+        case NumLiteral() as t: # already typed.
+            return t
+        case BoolLiteral() as t: # already typed.
+            return t
+        case StringLiteral() as t:
+            return t
+        case BinOp(op, left, right) if op in "+*-/":
+            tleft = typecheck(left)
+            tright = typecheck(right)
+            if tleft.type != NumType() or tright.type != NumType():
+                raise TypeError()
+            return BinOp(op, left, right, NumType())
+        case BinOp("<", left, right):
+            tleft = typecheck(left)
+            tright = typecheck(right)
+            if tleft.type != NumType() or tright.type != NumType():
+                raise TypeError()
+            return BinOp("<", left, right, BoolType())
+        case BinOp("=", left, right):
+            tleft = typecheck(left)
+            tright = typecheck(right)
+            if tleft.type != tright.type:
+                raise TypeError()
+            return BinOp("=", left, right, BoolType())
+        case if_else(c, t, f): # We have to typecheck both branches.
+            tc = typecheck(c)
+            if tc.type != BoolType():
+                raise TypeError()
+            tt = typecheck(t)
+            tf = typecheck(f)
+            if tt.type != tf.type: # Both branches must have the same type.
+                raise TypeError()
+            return if_else(tc, tt, tf, tt.type) # The common type becomes the type of the if-else.
+    raise TypeError()
+
+
+
+#typecheck end
 
 
 def eval(program: AST, environment: Environment = None) -> Value:
     if environment is None:
         environment = Environment()
-
+        print("hello123 ")
     def eval_(program):
         return eval(program, environment) 
        
@@ -354,19 +291,14 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case Variable(name):
             return environment.get(name)
             
-        case Put(Variable(name),e1):
-            tname=Variable(name)
-            tname.type=typecheck(e1).type 
-            
-            environment.update(name,eval_(e1),tname)
+        case Put(Variable(name),e1): 
+            environment.update(name,eval_(e1))
             return environment.get(name)
         
         case Get(Variable(name)):
             return environment.get(name)
 
         case Assign(Variable(name),e1):
-            tname=Variable(name)
-            tname.type=typecheck(e1).type
             environment.add(name,eval_(e1))
             return name
 
@@ -374,15 +306,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case Let(Variable(name), e1, e2) | LetMut(Variable(name),e1, e2):
             v1 = eval_(e1)
             environment.enter_scope()
-            tname=Variable(name)
-            print("first")
-            print(e1)
-            tname.type=typecheck(e1).type
-            print(tname)
-            print("second")
-            print(typecheck(e1).type)
-            print('third')
-            environment.add(name,v1,tname)
+            environment.add(name,v1)
             v2=eval_(e2)
             environment.exit_scope()
             return v2
@@ -405,24 +329,18 @@ def eval(program: AST, environment: Environment = None) -> Value:
 
         case LetAnd(Variable(name1),expr1,Variable(name2),expr2,expr3):
             v1=eval_(expr1)
-            tname1=Variable(name1)
-            tname1.type=typecheck(expr1).type
             v2=eval_(expr2)
-            tname2=Variable(name2)
-            tname2.type=typecheck(expr2).type
             environment.enter_scope()
             if environment.check(name1):
-                environment.update(name1,v1,tname1)
+                environment.update(name1,v1)
                 
             else:
-               tname1.type=typecheck(expr1).type
                environment.add(name1,v1)
 
             if environment.check(name2):
-                environment.update(name2,v2,tname2)
+                environment.update(name2,v2)
                 
             else:
-               tname2.type=typecheck(expr2).type
                environment.add(name2,v2)
             
             v3=eval_(expr3)
@@ -431,8 +349,6 @@ def eval(program: AST, environment: Environment = None) -> Value:
 
         case LetFun(Variable(name),params, body,expr):
             environment.enter_scope()
-            tname=Variable(name)
-            tname.type=typecheck(FnObject(params,body)).type
             environment.add(name, FnObject(params,body))
             v=eval_(expr)
             environment.exit_scope()
@@ -445,10 +361,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
             for arg in args:
                 argv.append(eval_(arg))
             environment.enter_scope()
-            for par,arg1,arg in zip(fn.params,argv,args):
-                tname=Variable(par.name)
-                tname.type=typecheck(arg).type
-                environment.add(v1,arg1)
+            for par,arg in zip(fn.params,argv):
+                environment.add(par.name,arg)
             v=eval_(fn.body)
             environment.exit_scope()
             return v
@@ -514,8 +428,6 @@ def eval(program: AST, environment: Environment = None) -> Value:
 
         case for_loop(Variable(name),e1,condition,updt,body):
             environment.enter_scope()
-            tname=Variable(name)
-            tname.type=typecheck(e1).type
             environment.add(name,eval_(e1))
             vcond=eval_(condition)
             while(vcond):
@@ -556,7 +468,7 @@ def test_let_eval():
     e1 = NumLiteral(5)
     e2 = BinOp("+", a, a)
     e  = Let(a, e1, e2)
-    # assert eval(e) == 10
+    assert eval(e) == 10
     e  = Let(a, e1, Let(a, e2, e2))
     assert eval(e) == 20
     e  = Let(a, e1, BinOp("+", a, Let(a, e2, e2)))
@@ -592,6 +504,7 @@ def test_if_else_eval():
     e6=BinOp("*",e3,e4)
     e7=BinOp(">",e5,e6)
     e10=if_else(e7,e5,e6)
+    print(e10)
     assert eval(e10) == 50
 
 def test_letmut_eg1():
@@ -706,6 +619,13 @@ def test_typecheck():
     print("t3: ",t3)
     assert t3.type == NumType()
 
+def test_typecheck1():
+    t1=BinOp("-",NumLiteral(5),NumLiteral(3))
+    t2=BinOp("+",t1,NumLiteral(2))
+    t3=typecheck(t2)
+    print("t2: ",t2)
+    print("t3: ",t3)
+    assert t3.type == NumType()
 print("test_eval(): ",test_eval())
 print("test_if_else_eval(): ", test_if_else_eval())
 print("test_let_eval(): ",test_let_eval())
