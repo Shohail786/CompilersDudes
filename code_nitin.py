@@ -168,7 +168,13 @@ class LetAnd:
 @dataclass
 class UBoolOp:
     expr: 'AST' 
-
+# my part
+@dataclass
+class UnaryOp:
+    operator: str
+    operand: 'AST'
+    type: Optional[SimType] = None
+# my part
 
 class Environment:
     env: List
@@ -441,6 +447,40 @@ def eval(program: AST, environment: Environment = None) -> Value:
             v1=eval_(e1)
             print(v1)
             return v1
+        
+        # my garbage code
+        case UnaryOp(op, arg):
+            if op == '+':
+                return +arg
+            elif op == '-':
+                return -arg
+            elif op == '++':
+                return arg + 1
+            elif op == '--':
+                return arg - 1
+            else:
+                raise ValueError("Invalid operator: " + op)
+                
+# argument should be integer how to ensure that?
+                # case UnaryOp(op, arg):
+                #     if op == '+':
+                #         return +arg
+                #     elif op == '-':
+                #         return -arg
+                #     elif op == '++':
+                #         if isinstance(arg, int):
+                #             return arg + 1
+                #         else:
+                #             raise ValueError("Invalid argument type: " + type(arg).__name__)
+                #     elif op == '--':
+                #         if isinstance(arg, int):
+                #             return arg - 1
+                #         else:
+                #             raise ValueError("Invalid argument type: " + type(arg).__name__)
+                #     else:
+                #         raise ValueError("Invalid operator: " + op)
+
+# my garbage code
 
     raise InvalidProgram()
 
