@@ -38,7 +38,7 @@ def Tokenizer(str):
     res = re.findall(r"[\w]+", str)
     for i in symbol:
         res.append(i)
-    print(res)
+    # print(res)
     return res
 
 ReservedKeyWords = "auto|break|case|char|const|continue|default|do|double|else|enum|extern|float|for|goto|if|int|long|register|return|short|signed|main|sizeof|static|struct|switch|typedef|union|unsigned|void|volatile|while|string|class|struc|include"
@@ -64,7 +64,7 @@ ScannedProgram = SpaceRemover(ProgramString)
 # ['for the', 'god 239adf', 'nitin']
 
 # it doesn't consider #input...
-print(ScannedProgram)
+# print(ScannedProgram)
 for line in ScannedProgram:
     tokens = Tokenizer(line)
     # first token will be ['for', 'the']
@@ -83,15 +83,28 @@ for line in ScannedProgram:
         elif (re.findall(ReservedIdentifiers, token)):
             Identifiers.append(token)
 
-print("There Are ",len(Keywords),"Keywords: ",Keywords)
+
+IdentifiersOutput = []
+[IdentifiersOutput.append(x) for x in Identifiers if x not in IdentifiersOutput]
+KeywordsOutput = []
+[KeywordsOutput.append(x) for x in Keywords if x not in KeywordsOutput]
+SymbolsOutput = []
+[SymbolsOutput.append(x) for x in Symbols if x not in SymbolsOutput]
+OperatorsOutput = []
+[OperatorsOutput.append(x) for x in Operators if x not in OperatorsOutput]
+NumeralsOutput = []
+[NumeralsOutput.append(x) for x in Numerals if x not in NumeralsOutput]
+HeadersOutput = []
+[HeadersOutput.append(x) for x in Headers if x not in HeadersOutput]
+
+print("There Are ",len(KeywordsOutput),"Keywords: ",KeywordsOutput)
 print("\n")
-print("There Are ",len(Identifiers),"Identifiers: ",Identifiers)
+print("There Are ",len(IdentifiersOutput),"Identifiers: ",IdentifiersOutput)
 print("\n")
-print("There Are ",len(Headers),"Header Files: ",Headers)
+print("There Are ",len(HeadersOutput),"Header Files: ",HeadersOutput)
 print("\n")
-print("There Are",len(Symbols),"Symbols:",Symbols)
+print("There Are",len(SymbolsOutput),"Symbols:",SymbolsOutput)
 print("\n")
-print("There Are ",len(Numerals),"Numerals:",Numerals)
+print("There Are ",len(NumeralsOutput),"Numerals:",NumeralsOutput)
 print("\n")
-print("There Are ",len(Operators),"Numerals:",Operators)
-print("\n")
+
