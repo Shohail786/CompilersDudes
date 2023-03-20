@@ -1,0 +1,2 @@
+let a is 2 in while a<10 and a<8 do seq printing 2*a+5-a end; put a is a+2 end end done end
+

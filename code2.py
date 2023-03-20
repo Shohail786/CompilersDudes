@@ -2,6 +2,7 @@ from fractions import Fraction
 from dataclasses import dataclass
 from typing import Optional, NewType
 from typing import List
+import sys
 
 
 # A minimal example to illustrate typechecking.
@@ -54,14 +55,15 @@ class Identifier:
 class Operator:
     op: str
 
-Token = Num | Bool | Keyword | Identifier | Operator
 
-class EndOfTokens(Exception):
+class EndOfTokens():
     pass
 
+Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens
 
-keywords = "if then else end while do done let is in letMut letAnd and seq anth put get printing ".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ; == %".split()
+
+keywords = "if then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall".split()
+symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ; % ( )".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
 
@@ -91,7 +93,15 @@ class Lexer:
         # returns the next token in the input stream
         try:
             match self.stream.next_char():
-                case c if c in symbolic_operators: return Operator(c)
+                # case ">":
+                #     if self.stream.next_char()=="=":
+                #         return Operator(">=")
+                #     else:
+                #         self.stream.unget()
+                #         return Operator(">")
+                case c if c in symbolic_operators: 
+                    return Operator(c)
+                
                 case c if c.isdigit():
                     n = int(c)
                     while True:
@@ -119,7 +129,8 @@ class Lexer:
                 case c if c in whitespace:
                     return self.next_token()
         except EndOfStream:
-            raise EndOfTokens
+            # raise EndOfTokens
+            return EndOfTokens()
 
     def peek_token(self) -> Token:
 
@@ -149,10 +160,11 @@ class Lexer:
 
     def __next__(self):
         # It calls next_token to get the next token
-        try:
-            return self.next_token()
-        except EndOfTokens:
-            raise StopIteration
+        return self.next_token()
+        # try:
+        #     return self.next_token()
+        # # except EndOfTokens:
+        #     raise StopIteration
 
 @dataclass
 class Parser:
@@ -172,6 +184,7 @@ class Parser:
         f = self.parse_expr()
         self.lexer.match(Keyword("end"))
         return if_else(c, t, f)
+    
     def parse_let(self):
         self.lexer.match(Keyword("let"))
         v=self.parse_expr()
@@ -197,7 +210,7 @@ class Parser:
         v1=self.parse_expr()
         self.lexer.match(Keyword("is"))
         e1=self.parse_expr()
-        self.lexer.match(Keyword("and"))
+        self.lexer.match(Keyword(";"))
         v2=self.parse_expr()
         self.lexer.match(Keyword("is"))
         e2=self.parse_expr()
@@ -246,6 +259,12 @@ class Parser:
         self.lexer.match(Keyword("end"))
         return Print(v)
     
+    def parse_ubool(self):
+        self.lexer.match(Keyword("ubool"))
+        v=self.parse_expr()
+        self.lexer.match(Keyword("end"))
+        return UBoolOp(v)
+    
     def parse_while(self):
         self.lexer.match(Keyword("while"))
         c = self.parse_expr()
@@ -253,6 +272,56 @@ class Parser:
         b = self.parse_expr()
         self.lexer.match(Keyword("done"))
         return while_loop(c, b)
+    
+    def parse_for(self):
+        self.lexer.match(Keyword("for"))
+        a=self.parse_expr()
+        self.lexer.match(Keyword("is"))
+        b=self.parse_expr()
+        self.lexer.match(Operator(";"))
+        c=self.parse_expr()
+        self.lexer.match(Operator(";"))
+        d=self.parse_expr()
+        self.lexer.match(Keyword(";"))
+        e=self.parse_expr()
+        self.lexer.match(Keyword("end"))
+        return for_loop(a,b,c,d,e)
+
+    def parse_LetFun(self):
+        self.lexer.match(Keyword("func"))
+        a=self.parse_expr()
+        self.lexer.match(Operator("("))
+        params=[]
+        while True:
+            match self.lexer.peek_token():
+                case Operator(")"):
+                    self.lexer.advance()
+                    break
+                case _:
+                    while True:
+                        params.append(self.parse_expr())
+                        match self.lexer.peek_token():
+                            case Operator(","):
+                                self.lexer.advance()
+                                continue
+                            case _:
+                                break    
+            
+        body=self.parse_expr()
+        self.lexer.match(Operator(","))
+        expr=self.parse_expr()
+        return LetFun(a,params,body,expr)
+    
+    def parse_FunCall(self):
+        self.lexer.match(Keyword("funCall"))
+        a=self.parse_expr()
+        self.lexer.match(Operator("("))
+        params=[]
+        while(self.lexer.match(Operator(")"))!=None):
+            params.append(self.parse_expr())
+            self.lexer.match(Operator(","))
+        return FunCall(a,params)
+
 
     def parse_atom(self):
         # checks the type of the next token
@@ -295,14 +364,40 @@ class Parser:
     def parse_cmp(self):
         left = self.parse_add()
         match self.lexer.peek_token():
-            case Operator(op) if op in "<>==":
+            case Operator(op) if op in "<>=":
                 self.lexer.advance()
                 right = self.parse_add()
                 return BinOp(op, left, right)
         return left
+    def parse_not(self):
+        
+        match self.lexer.peek_token():
+            case Operator("not"):
+                self.lexer.advance()
+                right = self.parse_cmp()
+                return UnOp("not",right)
+            case _:
+                return self.parse_cmp()
+    def parse_or(self):
+        left = self.parse_not()
+        match self.lexer.peek_token():
+            case Operator("or"):
+                self.lexer.advance()
+                right = self.parse_not()
+                return BinOp("or", left, right)
+        return left
+    def parse_and(self):
+        left = self.parse_or()
+        match self.lexer.peek_token():
+            case Operator("and"):
+                self.lexer.advance()
+                right = self.parse_or()
+                return BinOp("and", left, right)
+        return left
+
 
     def parse_simple(self):
-        return self.parse_cmp()
+        return self.parse_and()
 
     def parse_expr(self):
         #which handles the different cases for a valid expression: 
@@ -314,6 +409,8 @@ class Parser:
                 return self.parse_if()
             case Keyword("while"):
                 return self.parse_while()
+            case Keyword("for"):
+                return self.parse_for()
             case Keyword("let"):
                 return self.parse_let()
             case Keyword("letMut"):
@@ -328,8 +425,15 @@ class Parser:
                 return self.parse_Seq()
             case Keyword("printing"):
                 return self.parse_printing()
+            case Keyword("ubool"):
+                return self.parse_ubool()
+            case Keyword("func"):
+                return self.parse_LetFun()
+            case Keyword("funCall"):
+                return self.parse_FunCall()
             case _:
                 return self.parse_simple()
+            
 
 @dataclass
 class NumType:
@@ -477,6 +581,7 @@ class Print:
     e1: 'AST'
     type: Optional[SimType] = None
 
+
 @dataclass
 class LetFun:
     name:'AST'
@@ -509,6 +614,10 @@ class LetAnd:
 class UBoolOp:
     expr: 'AST' 
     type: Optional[SimType] = None
+@dataclass 
+class UnOp:
+    operator: str 
+    expr='AST'
 
 AST = NumLiteral |BoolLiteral | StringLiteral | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd
 # TypedAST = NewType('TypedAST', AST)
@@ -658,14 +767,14 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return v
             
         case UBoolOp(expr):
-            if typecheck(expr).type==NumType():
+            if expr.type==NumType():
                     v1=eval_(expr)
                     if v1 !=0:
-                        print("yes")
+                        
                         return True
                     else:
                         return False
-            elif typecheck(expr).type==StringType():
+            elif expr.type==StringType():
                     v1=eval_(expr)
                     if v1 == "":
                         return False
@@ -699,8 +808,15 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return eval_(left) > eval_(right)
         case BinOp("<", left,right):
             return eval_(left) < eval_(right)
-        case BinOp("==", left,right):
+        case BinOp("=", left,right):
             return eval_(left) == eval_(right)
+        case BinOp ("or",left,right):
+            return eval_(left) or eval_(right)
+        case BinOp("and",left,right):
+            return eval_(left) and eval_(right)
+        case UnOp("not", expr):
+            return not(eval_(expr))
+        
         
         case if_else(expr,et,ef):
             v1 = eval_(expr)
@@ -712,11 +828,12 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case while_loop(condition,e1):
             environment.enter_scope()
             vcond = eval_(condition)
+            
             while(vcond):
-                v5=eval_(e1) 
+                eval_(e1) 
                 vcond=eval_(condition)
             environment.exit_scope()
-            return v5
+            return None
 
         case for_loop(Variable(name),e1,condition,updt,body):
             environment.enter_scope()
@@ -765,9 +882,40 @@ def typecheck(program: AST, environment: Environment = None) -> AST:
             print("t1 ",t1)
             tname=Variable(name)
             tname.type=t1
-            v2=Put(tname,v1)
+            v2=Put(tname,v1,tname.type)
             return v2
-        case BinOp(op, left, right) if op in "+*-/":
+        case Get(Variable(name)):
+            t1=environment.get(name)
+            tname=Variable(name)
+            tname.type=t1
+            v2=Get(tname)
+            return v2
+        
+        case Assign(Variable(name),e1):
+            v1=typecheck_(e1)
+            tname=Variable(name)
+            tname.type=v1.type
+            environment.add(name,tname.type)
+            return Assign(tname,v1)
+
+        case Seq(body):  
+            newBody=[]
+            for item in body:
+                v1=typecheck_(item)
+                newBody.append(v1)
+            return Seq(newBody,v1.type)
+        
+        case Print(e1):
+            v1=typecheck_(e1)
+            print("e1 ",e1)
+            print("v1 ",v1)
+            return Print(v1,v1.type)
+
+        case UBoolOp(expr):
+            v1=typecheck_(expr)
+            return UBoolOp(v1,BoolType())
+
+        case BinOp(op, left, right) if op in "+*-/%":
             tleft = typecheck_(left)
             tright = typecheck_(right)
             if tleft.type != NumType() or tright.type != NumType():
@@ -791,6 +939,7 @@ def typecheck(program: AST, environment: Environment = None) -> AST:
             if tleft.type != NumType() or tright.type != NumType():
                 raise TypeError()
             return BinOp("==", tleft, tright, BoolType())
+        
         case BinOp("=", left, right):
             tleft = typecheck_(left)
             tright = typecheck_(right)
@@ -806,6 +955,25 @@ def typecheck(program: AST, environment: Environment = None) -> AST:
             if tt.type != tf.type: # Both branches must have the same type.
                 raise TypeError()
             return if_else(tc, tt, tf, tt.type) # The common type becomes the type of the if-else.
+
+        case while_loop(condition,e1):
+            environment.enter_scope()
+            condition1 = typecheck_(condition)
+            exp1= typecheck_(e1) 
+            environment.exit_scope()
+            return while_loop(condition1,exp1,exp1.type)
+        
+        case for_loop(Variable(name),e1,condition,updt,body):
+            tname=Variable(name)
+            v1=typecheck_(e1)
+            environment.enter_scope()
+            environment.add(name,v1.type)
+            vcond=typecheck_(condition)
+            vbody=typecheck_(body)
+            vupdt=typecheck_(updt)   
+            environment.exit_scope()
+            return for_loop(tname,v1,vcond,vupdt,vbody,vbody.type)
+            
         case Let(Variable(name),exp1,exp2) | LetMut(Variable(name),exp1,exp2):
             tname=Variable(name)
             v1=typecheck_(exp1)
@@ -816,6 +984,31 @@ def typecheck(program: AST, environment: Environment = None) -> AST:
             environment.exit_scope()
             v3=Let(tname,v1,v2,v2.type)
             return v3
+        
+        case LetAnd(Variable(name1),expr1,Variable(name2),expr2,expr3):
+            newExp1=typecheck_(expr1)
+            newExp2=typecheck_(expr2)
+            tname1=Variable(name1)
+            tname1.type=newExp1.type
+            tname2=Variable(name2)
+            tname2.type=newExp2.type
+            environment.enter_scope()
+            if environment.check(name1):
+                environment.update(name1,newExp1.type)
+                
+            else:
+               environment.add(name1,newExp1.type)
+
+            if environment.check(name2):
+                environment.update(name2,newExp2.type)
+                
+            else:
+               environment.add(name2,newExp2.type)
+            
+            newExp3=typecheck_(expr3)
+            environment.exit_scope()
+            return LetAnd(tname1,newExp1,tname2,newExp2,newExp3, newExp3.type)
+        
     raise TypeError()
 
 def test_typecheck():
@@ -837,13 +1030,16 @@ def test_parse():
         return Parser.parse_expr (
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
+    # file=open(sys.argv[1],'r')
+    # x=file.read()
+    # print(x)
     x=input()
     y=parse(x)
     print("y-> ",y)
-    z=typecheck(y)
-    print("z-> ",z)
-    print("ans-> ",eval(z))
-    print(z.type)
+    # z=typecheck(y)
+    # print("z-> ",z)
+    print("ans-> ",eval(y))
+    # print(z.type)
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
     # print(parse("if a+b > 2*d then a*b - c + d else e*f/g end"))
     # print(parse("if 10*5 > 6*6 then 10*5 else 6*6 end"))
