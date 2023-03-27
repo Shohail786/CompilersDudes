@@ -63,7 +63,7 @@ Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens
 
 
 keywords = "if then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ; % ( )".split()
+symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ; , % ( )".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
 
@@ -222,12 +222,30 @@ class Parser:
     def parse_Seq(self):
         self.lexer.match(Keyword("seq"))
         lst=[]
-        e1=self.parse_expr()
-        lst.append(e1)
-        self.lexer.match(Operator(";"))
-        e2=self.parse_expr()
-        lst.append(e2)
-        self.lexer.match(Keyword("end"))
+        #10
+        while True:
+            match self.lexer.peek_token():
+                case Keyword("end"):
+                    self.lexer.advance()
+                    break
+                case _:
+                    while True:
+                        lst.append(self.parse_expr())
+                        match self.lexer.peek_token():
+                            case Operator(";"):
+                                self.lexer.advance()
+                                continue
+                            case _:
+                                break
+        #12
+        # e1=self.parse_expr()
+        # lst.append(e1)
+        # self.lexer.match(Operator(";"))
+        # e2=self.parse_expr()
+        # lst.append(e2)
+        # self.lexer.match(Keyword("end"))
+
+        #13
         # print(" helloo ")
         # a=True
         # while a:
@@ -1030,16 +1048,57 @@ def test_parse():
         return Parser.parse_expr (
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
-    file=open(sys.argv[1],'r')
-    x=file.read()
+    #10
+    x=input()
     print(x)
-    # x=input()
     y=parse(x)
     print("y-> ",y)
-    # z=typecheck(y)
-    # print("z-> ",z)
-    print("ans-> ",eval(y))
-    # print(z.type)
+    print("ans-> ", eval(y))
+
+    #file=open(sys.argv[1],'r')
+    #11
+    # x=input()
+    #x=file.read()
+    # print(x)
+    # y=parse(x)
+    # print("y-> ",y)
+    # # z=typecheck(y)
+    # # print("z-> ",z)
+    # print("ans-> ", eval(y))
+    # # print(z.type)
+
+    #12
+    # for line in file.readlines():
+    #     x=line
+    #     print(x)
+    #     y=parse(x)
+    #     print("y-> ",y)
+    #     print("ans-> ",eval(y))
+    #13
+    # result = []
+    # parens = 0
+    # buff = ""
+    # for c in x:
+    #     if c == "{":
+    #         parens += 1
+    #     if parens > 0:
+    #         if c == "{":
+    #             pass
+    #         elif c == "}":
+    #             pass
+    #         else:
+    #             buff += c
+    #     if c == "}":
+    #         parens -= 1
+    #     if not parens and buff:
+    #         result.append(buff)
+    #         buff = ""
+    # for i, r in enumerate(result):
+    #     print(i,r)
+    #     y=parse(r)
+    #     print("y-> ",y)
+    #     print("ans-> ",eval(y))
+
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
     # print(parse("if a+b > 2*d then a*b - c + d else e*f/g end"))
     # print(parse("if 10*5 > 6*6 then 10*5 else 6*6 end"))
