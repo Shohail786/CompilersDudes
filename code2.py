@@ -1030,10 +1030,10 @@ def test_parse():
         return Parser.parse_expr (
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
-    # file=open(sys.argv[1],'r')
-    # x=file.read()
-    # print(x)
-    x=input()
+    file=open(sys.argv[1],'r')
+    x=file.read()
+    print(x)
+    # x=input()
     y=parse(x)
     print("y-> ",y)
     # z=typecheck(y)
@@ -1073,6 +1073,11 @@ def test_eval():
 #     expr = Str_slicing(str1,start,end)
 #     assert eval(expr) == 'abcd'
 
+def test_string_slicing():
+    program = Str_slicing(StringLiteral("Hello, world!"), NumLiteral(0), NumLiteral(5))
+    # program = Str_slicing("Hello, world!", NumLiteral(0), NumLiteral(5))
+    result = eval(program)
+    assert eval(result) == 'Hello'
 
 def test_let_eval():
     a  = Variable("a")
