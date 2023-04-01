@@ -10,7 +10,7 @@ import sys
 class EndOfStream(Exception):
     pass
 
-@dataclass
+
 # This defines a class named Stream, which will store information 
 # about a character stream
 class Stream:
@@ -36,22 +36,22 @@ class Stream:
 
 # Define the token types.
 
-@dataclass
+
 class Num:
     n: int
-@dataclass
+
 class Bool:
     b: bool
 
-@dataclass
+
 class Keyword:
     word: str
 
-@dataclass
+
 class Identifier:
     word: str
 
-@dataclass
+
 class Operator:
     op: str
 
@@ -81,7 +81,7 @@ def word_to_token(word):
 class TokenError(Exception):
     pass
 
-@dataclass
+
 class Lexer:
     stream: Stream
     save: Token = None
@@ -166,7 +166,7 @@ class Lexer:
         # # except EndOfTokens:
         #     raise StopIteration
 
-@dataclass
+
 class Parser:
     lexer: Lexer
 
@@ -464,20 +464,19 @@ class Parser:
                 return self.parse_simple()
             
 
-@dataclass
 class NumType:
     pass
 
-@dataclass
+
 class BoolType:
     pass
-@dataclass
+
 class StringType:
     pass
 
 SimType = NumType | BoolType | StringType
 
-@dataclass
+
 #  The _init_ method takes any number of arguments and passes them to the Fraction constructor to create a new Fraction object, which is then stored in the value field.
 class NumLiteral:
     value: Fraction
@@ -486,17 +485,17 @@ class NumLiteral:
         self.value = Fraction(*args)
 
 
-@dataclass
+
 class StringLiteral:
     word : str 
     type: SimType = StringType()
 
-@dataclass
+
 class Integer:
     value:int
     type:SimType=NumType()
 
-@dataclass
+
 # this is kind of binary operation
 class BinOp:                      
     operator: str      # '+' is the operator in addition
@@ -507,32 +506,32 @@ class BinOp:
     type: Optional[SimType] = None
 
 
-@dataclass
+
 class Variable:
     name: str
     type: Optional[SimType] = None
 
 
-@dataclass
+
 class StringLiteral:
     word : str 
     type: SimType = StringType()
 
 
-@dataclass
+
 class Let:
     var: 'AST'
     e1: 'AST'
     e2: 'AST'
     type: Optional[SimType] = None
 
-@dataclass
+
 class BoolLiteral:
     value: bool
     type: SimType = BoolType()
 
 
-@dataclass
+
 class if_else:
     expr: 'AST'
     et: 'AST'    #statement if expr is true
@@ -540,14 +539,14 @@ class if_else:
     type: Optional[SimType] = None
 
 
-@dataclass
+
 class while_loop:
     condition: 'AST'
     body: 'AST'
     type: Optional[SimType] = None
 
 
-@dataclass
+
 class for_loop:
     var: 'AST'
     expr: 'AST'
@@ -557,13 +556,13 @@ class for_loop:
     type: Optional[SimType] = None
 
 
-@dataclass
+
 class Two_Str_concatenation:
     str1: 'AST'
     str2: 'AST'
     type: Optional[SimType] = None
 
-@dataclass
+
 
 class Str_slicing:
     str1: 'AST'
@@ -572,7 +571,7 @@ class Str_slicing:
     type: Optional[SimType] = None
 
 
-@dataclass
+
 class LetMut:
     var: 'AST'
     e1: 'AST'
@@ -580,38 +579,38 @@ class LetMut:
     type: Optional[SimType] = None
 
 
-@dataclass
+
 class Seq:
     body: List['AST']
     type: Optional[SimType] = None
 
 
-@dataclass
+
 class Put:
     var: 'AST'
     e1: 'AST'
     type: Optional[SimType] = None
 
-@dataclass
+
 
 class Assign:
     var: 'AST'
     e1: 'AST'
     type: Optional[SimType] = None
 
-@dataclass
+
 
 class Get:
     var: 'AST'
     type: Optional[SimType] = None
 
-@dataclass
+
 class Print:
     e1: 'AST'
     type: Optional[SimType] = None
 
 
-@dataclass
+
 class LetFun:
     name:'AST'
     params:List['AST']
@@ -619,19 +618,19 @@ class LetFun:
     expr:'AST'
     type: Optional[SimType] = None
 
-@dataclass
+
 class FunCall:
     fn:'AST'
     args: List['AST']
     type: Optional[SimType] = None
 
-@dataclass
+
 class FnObject:
     params: List['AST']
     body: 'AST'
     type: Optional[SimType] = None
 
-@dataclass
+
 class LetAnd:
     var1:'AST'
     expr1: 'AST'
@@ -639,11 +638,11 @@ class LetAnd:
     expr2:'AST'
     expr3:'AST'
     type: Optional[SimType] = None
-@dataclass
+
 class UBoolOp:
     expr: 'AST' 
     type: Optional[SimType] = None
-@dataclass 
+ 
 class UnOp:
     operator: str 
     expr='AST'
@@ -1060,16 +1059,16 @@ def test_parse():
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
     #10
-    x=input()
-    print(x)
-    y=parse(x)
-    print("y-> ",y)
-    print("ans-> ", eval(y))
+    # x=input()
+    # print(x)
+    # y=parse(x)
+    # print("y-> ",y)
+    # print("ans-> ", eval(y))
 
-    # file=open(sys.argv[1],'r')
+    file=open(sys.argv[1],'r')
     #11
     # x=input()
-    # x=file.read()
+    x=file.read()
     # print(x)
     # y=parse(x)
     # print("y-> ",y)
@@ -1140,7 +1139,7 @@ print("parse  ",test_parse())
 # head - First element in the list using indexing
 # tail - Creates a list of elements except the first one using indexing
 
-@dataclass
+
 class List:
     def __init__(self, elements=None):
         self.elements = elements or []

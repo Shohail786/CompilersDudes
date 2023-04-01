@@ -306,6 +306,7 @@ class Parser:
         return for_loop(a,b,c,d,e)
 
     def parse_LetFun(self):
+           
         self.lexer.match(Keyword("func"))
         a=self.parse_expr()
         self.lexer.match(Operator("("))
@@ -335,9 +336,20 @@ class Parser:
         a=self.parse_expr()
         self.lexer.match(Operator("("))
         params=[]
-        while(self.lexer.match(Operator(")"))!=None):
-            params.append(self.parse_expr())
-            self.lexer.match(Operator(","))
+        while True:
+            match self.lexer.peek_token():
+                case Operator(")"):
+                    self.lexer.advance()
+                    break
+                case _:
+                    while True:
+                        params.append(self.parse_expr())
+                        match self.lexer.peek_token():
+                            case Operator(","):
+                                self.lexer.advance()
+                                continue
+                            case _:
+                                break
         return FunCall(a,params)
 
 
@@ -353,6 +365,8 @@ class Parser:
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
+            case Keyword("funCall"):     
+                 return self.parse_FunCall()
     
 
     def parse_mult(self):
@@ -1055,10 +1069,10 @@ def test_parse():
     print("y-> ",y)
     print("ans-> ", eval(y))
 
-    #file=open(sys.argv[1],'r')
+    # file=open(sys.argv[1],'r')
     #11
     # x=input()
-    #x=file.read()
+    # x=file.read()
     # print(x)
     # y=parse(x)
     # print("y-> ",y)
@@ -1075,6 +1089,7 @@ def test_parse():
     #     print("y-> ",y)
     #     print("ans-> ",eval(y))
     #13
+    # x=file.read()
     # result = []
     # parens = 0
     # buff = ""
@@ -1131,7 +1146,11 @@ def test_eval():
 #     end = NumLiteral(4)
 #     expr = Str_slicing(str1,start,end)
 #     assert eval(expr) == 'abcd'
-
+def test_string_slicing():
+    program = Str_slicing(StringLiteral("Hello, world!"), NumLiteral(0), NumLiteral(5))
+    # program = Str_slicing("Hello, world!", NumLiteral(0), NumLiteral(5))
+    result = eval(program)
+    assert eval(result) == 'Hello'
 
 def test_let_eval():
     a  = Variable("a")
@@ -1261,6 +1280,22 @@ def test_Letfun2():
     )
     assert eval(e) == (15+2)*(12+3)
 
+def test_Letfun3():
+    n = Variable("n")
+    f = Variable("f")
+    g = FunCall(f,[NumLiteral(5)])
+    h=BinOp("=",n,NumLiteral(1))
+    m=BinOp("-",n,NumLiteral(1))
+    k=BinOp("*",n,FunCall(f,[m]))
+    l=if_else(h,NumLiteral(1),k)
+    e = LetFun(
+        f, [n], l,
+        g
+    )
+    print(eval(e))
+    assert eval(e) == 120
+
+
 def test_LetAnd():
     a=Variable('a')
     b=Variable('b')
@@ -1309,6 +1344,7 @@ def test_typecheck1():
 # print("test_for_eval(): ",test_for_eval())
 # print("test_Letfun1(): ",test_Letfun1())
 # print("test_Letfun2(): ",test_Letfun2())
+# print("test_Letfun3(): ",test_Letfun3())
 # print("test_LetAnd(): ",test_LetAnd())
 # print("test_UBoolOp1(): ",test_UBoolOp1())
 # print("test_UBoolOp2(): ",test_UBoolOp2())
