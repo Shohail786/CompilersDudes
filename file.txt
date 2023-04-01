@@ -1,4 +1,5 @@
 {let a is 1 in let b is 0 in seq while a<11 do seq put b is 
 a+b end ;put a is a+1 end end done; printing b end end end end}
 {let a is 5 in a+a end}
-
+{func f(n) if n=1 or n=0 then 1 else funCall f(n-1) *n end , funCall f(6)
+}
