@@ -210,7 +210,7 @@ class Parser:
         v1=self.parse_expr()
         self.lexer.match(Keyword("is"))
         e1=self.parse_expr()
-        self.lexer.match(Keyword(";"))
+        self.lexer.match(Operator(";"))
         v2=self.parse_expr()
         self.lexer.match(Keyword("is"))
         e2=self.parse_expr()
@@ -270,7 +270,7 @@ class Parser:
         self.lexer.match(Keyword("get"))
         v=self.parse_expr()
         return Get(v)
-    
+
     def parse_assign(self):
         self.lexer.match(Keyword("assign"))
         v1=self.parse_expr()
@@ -307,7 +307,7 @@ class Parser:
         c=self.parse_expr()
         self.lexer.match(Operator(";"))
         d=self.parse_expr()
-        self.lexer.match(Keyword(";"))
+        self.lexer.match(Operator(";"))
         e=self.parse_expr()
         self.lexer.match(Keyword("end"))
         return for_loop(a,b,c,d,e)
