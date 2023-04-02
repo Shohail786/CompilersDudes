@@ -210,7 +210,7 @@ class Parser:
         v1=self.parse_expr()
         self.lexer.match(Keyword("is"))
         e1=self.parse_expr()
-        self.lexer.match(Keyword(";"))
+        self.lexer.match(Operator(";"))
         v2=self.parse_expr()
         self.lexer.match(Keyword("is"))
         e2=self.parse_expr()
@@ -307,9 +307,10 @@ class Parser:
         c=self.parse_expr()
         self.lexer.match(Operator(";"))
         d=self.parse_expr()
-        self.lexer.match(Keyword(";"))
+        self.lexer.match(Operator(";"))
         e=self.parse_expr()
         self.lexer.match(Keyword("end"))
+        
         return for_loop(a,b,c,d,e)
 
     def parse_LetFun(self):
@@ -807,14 +808,14 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return v
             
         case UBoolOp(expr):
-            if expr.type==NumType():
+            if typecheck(expr).type==NumType():
                     v1=eval_(expr)
                     if v1 !=0:
                         
                         return True
                     else:
                         return False
-            elif expr.type==StringType():
+            elif typecheck(expr).type==StringType():
                     v1=eval_(expr)
                     if v1 == "":
                         return False
