@@ -42,6 +42,9 @@ class Num:
 @dataclass
 class Bool:
     b: bool
+@dataclass
+class String:
+    word: str
 
 @dataclass
 class Keyword:
@@ -59,10 +62,10 @@ class Operator:
 class EndOfTokens():
     pass
 
-Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens
+Token = Num | Bool | String |Keyword | Identifier | Operator | EndOfTokens
 
 
-keywords = "if then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall assign".split()
+keywords = "str bool if then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall assign".split()
 symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ; , % ( )".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
@@ -101,14 +104,32 @@ class Lexer:
                 #         return Operator(">")
                 case c if c in symbolic_operators: 
                     return Operator(c)
-                
+                case '"':
+                    s=c
+                    try:
+                        while (c:=self.stream.next_char())!='"':
+                            s+=c
+                        return String(s)
+                    except EndOfStream:
+                        raise TokenError()
                 case c if c.isdigit():
                     n = int(c)
+                    flag=0
                     while True:
                         try:
                             c = self.stream.next_char()
-                            if c.isdigit():
+                            if c=='.':
+                                flag=1
+                                c = self.stream.next_char()
+                                count=0  
+                            if c.isdigit() and flag==0:
                                 n = n*10 + int(c)
+                            elif c.isdigit() and flag==1:
+                                flag=1
+                                count+=1
+                                n = n*(10**count) + int(c)
+                                n=n/(10**count)
+
                             else:
                                 self.stream.unget()
                                 return Num(n)
@@ -374,6 +395,9 @@ class Parser:
                 return BoolLiteral(value)
             case Keyword("funCall"):     
                  return self.parse_FunCall()
+            case String(word):
+                self.lexer.advance()
+                return StringLiteral(word)
     
 
     def parse_mult(self):
@@ -740,6 +764,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
 
         case Assign(Variable(name),e1):
             environment.add(name,eval_(e1))
+            print(environment.env)
             return name
 
 
@@ -879,6 +904,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case for_loop(Variable(name),e1,condition,updt,body):
             environment.enter_scope()
             environment.add(name,eval_(e1))
+            print(environment.env)
             vcond=eval_(condition)
             while(vcond):
                 v1=eval_(body)
@@ -889,6 +915,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
         
         case Print(e1):
             v1=eval_(e1)
+            print(environment.env)
             print(v1)
             return v1
 
@@ -1072,13 +1099,13 @@ def test_parse():
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
     #10
-    # x=input()
-    # print(x)
-    # y=parse(x)
-    # print("y-> ",y)
-    # print("ans-> ", eval(y))
+    x=input()
+    print(x)
+    y=parse(x)
+    print("y-> ",y)
+    print("ans-> ", eval(y))
 
-    file=open(sys.argv[1],'r')
+    # file=open(sys.argv[1],'r')
     #11
     # x=input()
     # x=file.read()
@@ -1097,31 +1124,31 @@ def test_parse():
     #     y=parse(x)
     #     print("y-> ",y)
     #     print("ans-> ",eval(y))
-    13
-    x=file.read()
-    result = []
-    parens = 0
-    buff = ""
-    for c in x:
-        if c == "{":
-            parens += 1
-        if parens > 0:
-            if c == "{":
-                pass
-            elif c == "}":
-                pass
-            else:
-                buff += c
-        if c == "}":
-            parens -= 1
-        if not parens and buff:
-            result.append(buff)
-            buff = ""
-    for i, r in enumerate(result):
-        print(i,r)
-        y=parse(r)
-        print("y-> ",y)
-        print("ans-> ",eval(y))
+    #13
+    # x=file.read()
+    # result = []
+    # parens = 0
+    # buff = ""
+    # for c in x:
+    #     if c == "{":
+    #         parens += 1
+    #     if parens > 0:
+    #         if c == "{":
+    #             pass
+    #         elif c == "}":
+    #             pass
+    #         else:
+    #             buff += c
+    #     if c == "}":
+    #         parens -= 1
+    #     if not parens and buff:
+    #         result.append(buff)
+    #         buff = ""
+    # for i, r in enumerate(result):
+    #     print(i,r)
+    #     y=parse(r)
+    #     print("y-> ",y)
+    #     print("ans-> ",eval(y))
 
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
     # print(parse("if a+b > 2*d then a*b - c + d else e*f/g end"))
@@ -1380,7 +1407,6 @@ def test_str_concatenation():
     assert eval(expr) == 'abcd'
 
 
-
 # print(test_eval())
 # print(test_if_else_eval())
 # print(test_let_eval())
@@ -1483,3 +1509,4 @@ def test_typecheck1():
 # print("test_UBoolOp2(): ",test_UBoolOp2())
 # print("test_typecheck(): ",test_typecheck())
 # print("test_list() ",test_list()) 
+print("test-str-concatenation() ",test_str_concatenation())
