@@ -100,6 +100,8 @@ class Lexer:
                 #         self.stream.unget()
                 #         return Operator(">")
                 case c if c in symbolic_operators: 
+                    # d = Operator(c)
+                    # print(d)
                     return Operator(c)
                 
                 case c if c.isdigit():
@@ -359,7 +361,7 @@ class Parser:
                                 break
         return FunCall(a,params)
 
-
+    # lexer.peek_token()
     def parse_atom(self):
         # checks the type of the next token
         match self.lexer.peek_token():
@@ -369,12 +371,18 @@ class Parser:
             case Num(value):
                 self.lexer.advance()
                 return NumLiteral(value)
+            case Operator(op = '('):
+                self.lexer.advance()
+                expr_ = self.parse_add()
+                match self.lexer.peek_token():
+                    case Operator(op = ')'):
+                        self.lexer.advance()
+                        return expr_
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
             case Keyword("funCall"):     
                  return self.parse_FunCall()
-    
 
     def parse_mult(self):
         left = self.parse_atom()
@@ -387,6 +395,17 @@ class Parser:
                 case _:
                     break
         return left
+
+    # def factor(self):
+    #     while True:
+    #         match self.lexer.peek_token():
+    #             case Operator(op) if op in "(":
+    #                 self.lexer.advance()
+    #                 expr_ = self.parse_add()
+    #                 match self.lexer.peek_token():
+    #                     case Operator(op) if op in ")":
+    #                         self.lexer.advance()
+    #                         return expr_
 
     def parse_add(self):
         left = self.parse_mult()
@@ -1074,27 +1093,10 @@ def run_shell(text):
 
 
     result = []
-    parens = 0
-    buff = ""
-    for c in text:
-        # buff += c
-        if c == "{":
-            parens += 1
-        if parens > 0:
-            if c == "{":
-                pass
-            elif c == "}":
-                pass
-            else:
-                buff += c
-        if c == "}":
-            parens -= 1
-        if not parens and buff:
-            result.append(buff)
-            buff = ""
-
+    result.append(text)
     for i, r in enumerate(result):
         y=parse(r)
+        print("AST -> ", y)
         print("Output -> ",eval(y))
 
 def test_parse():

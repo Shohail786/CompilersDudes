@@ -1,4 +1,13 @@
-{func f(n) if n=1 or n=0 then 1 else funCall f(n-1)*n end , funCall f(6)
+{let a is 1 in let b is 0 in seq while a<11 do seq put b is 
+a+b end ;put a is a+1 end; printing a end
+ end done; printing b end end end end}
+{let a is 5 in a+a end}
+{func f(n) if n=1 or n=0 then 1 else n*funCall f(n-1) end , funCall f(6)
 }
-{printing "hello" end}
-{let a is 31 in while a>0 }
+{seq assign a is 2; printing a end end}
+{let a is 0 in while a<11 do seq put a is a+1 end; printing a end end done end}
+{ let a is 4 in letAnd a is 5 ; b is 2 in a+b end end }
+{ for i is 0; i<10 ; put i is i+1 end ; printing i end end}
+{ubool 5 end}
+{seq assign a is 5 ; printing get a end end}
+{ func f(a,b,c) a*a+b*b+c*c , funCall f (5,6,7) }
