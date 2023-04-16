@@ -4,7 +4,7 @@ from typing import Optional, NewType
 from typing import List
 import sys
 
-
+#vrivb
 # A minimal example to illustrate typechecking.
 
 class EndOfStream(Exception):
