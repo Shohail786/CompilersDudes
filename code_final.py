@@ -70,6 +70,7 @@ class EndOfTokens():
 Token = Num | Bool |Float | String |Keyword | Identifier | Operator | EndOfTokens
 
 
+
 keywords = "str bool if lst then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall assign".split()
 symbolic_operators = "+ - * ^ / & < > ≤ ≥ = ≠ ; , % [ ] ( )".split()
 word_operators = "and or not quot rem".split()
@@ -1580,4 +1581,6 @@ def test_typecheck1():
 # print("test_UBoolOp2(): ",test_UBoolOp2())
 # print("test_typecheck(): ",test_typecheck())
 # print("test_list() ",test_list()) 
+
 # print("test-str-concatenation() ",test_str_concatenation())
+
