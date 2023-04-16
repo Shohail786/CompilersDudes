@@ -1,4 +1,5 @@
 from fractions import Fraction
+from integer import Integer
 from dataclasses import dataclass
 from typing import Optional, NewType
 from typing import List
@@ -40,6 +41,10 @@ class Stream:
 class Num:
     n: int
 @dataclass
+class Float:
+    n:float
+
+@dataclass
 class Bool:
     b: bool
 @dataclass
@@ -62,11 +67,12 @@ class Operator:
 class EndOfTokens():
     pass
 
-Token = Num | Bool | String |Keyword | Identifier | Operator | EndOfTokens
+Token = Num | Bool |Float | String |Keyword | Identifier | Operator | EndOfTokens
 
 
-keywords = "str bool if then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall assign".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠ % ; , % ( )".split()
+
+keywords = "str bool if lst then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall assign".split()
+symbolic_operators = "+ - * ^ / & < > ≤ ≥ = ≠ ; , % [ ] ( )".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
 
@@ -105,10 +111,12 @@ class Lexer:
                 case c if c in symbolic_operators: 
                     return Operator(c)
                 case '"':
-                    s=c
+                    s=""
                     try:
-                        while (c:=self.stream.next_char())!='"':
+                        c=self.stream.next_char()
+                        while c!='"':
                             s+=c
+                            c=self.stream.next_char()
                         return String(s)
                     except EndOfStream:
                         raise TokenError()
@@ -130,11 +138,17 @@ class Lexer:
                                 n = n*(10**count) + int(c)
                                 n=n/(10**count)
 
-                            else:
+                            elif flag==0:
                                 self.stream.unget()
                                 return Num(n)
+                            elif flag==1:
+                                self.stream.unget()
+                                return Float(n)
                         except EndOfStream:
-                            return Num(n)
+                            if flag==1:
+                              return Float(n)
+                            else:
+                                return Num(n)
                 case c if c.isalpha():
                     s = c
                     while True:
@@ -287,6 +301,27 @@ class Parser:
         self.lexer.match(Keyword("end"))
         return Put(v,e)
     
+    def parse_lst(self):
+        self.lexer.match(Keyword("lst"))
+        self.lexer.match(Operator("["))
+        params=[]
+        while True:
+            match self.lexer.peek_token():
+                case Operator("]"):
+                    self.lexer.advance()
+                    break
+                case _:
+                    while True:
+                        params.append(self.parse_expr())
+                        match self.lexer.peek_token():
+                            case Operator(","):
+                                self.lexer.advance()
+                                continue
+                            case _:
+                                break
+        return Lst(params)    
+
+
     def parse_get(self):
         self.lexer.match(Keyword("get"))
         v=self.parse_expr()
@@ -390,6 +425,9 @@ class Parser:
             case Num(value):
                 self.lexer.advance()
                 return NumLiteral(value)
+            case Float(value):
+                self.lexer.advance()
+                return FloatLiteral(value)
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
@@ -398,15 +436,24 @@ class Parser:
             case String(word):
                 self.lexer.advance()
                 return StringLiteral(word)
-    
+            
+    def parse_exp(self):
+        left = self.parse_atom()
+        match self.lexer.peek_token():
+            case Operator("^"):
+                self.lexer.advance()
+                right = self.parse_atom()
+                return BinOp("^", left, right)
+            case _:
+                return left
 
     def parse_mult(self):
-        left = self.parse_atom()
+        left = self.parse_exp()
         while True:
             match self.lexer.peek_token():
                 case Operator(op) if op in "*/%":
                     self.lexer.advance()
-                    m = self.parse_atom()
+                    m = self.parse_exp()
                     left = BinOp(op, left, m)
                 case _:
                     break
@@ -457,7 +504,7 @@ class Parser:
                 right = self.parse_or()
                 return BinOp("and", left, right)
         return left
-
+    
 
     def parse_simple(self):
         return self.parse_and()
@@ -496,6 +543,10 @@ class Parser:
                 return self.parse_LetFun()
             case Keyword("funCall"):
                 return self.parse_FunCall()
+            case Keyword("return"):
+                return self.parse_Return()
+            case Keyword("lst"):
+                return self.parse_lst()
             case _:
                 return self.parse_simple()
             
@@ -505,21 +556,28 @@ class NumType:
     pass
 
 @dataclass
+class FloatType:
+    pass
+@dataclass
 class BoolType:
     pass
 @dataclass
 class StringType:
     pass
 
-SimType = NumType | BoolType | StringType
+SimType = NumType | BoolType | StringType| FloatType
 
 @dataclass
 #  The _init_ method takes any number of arguments and passes them to the Fraction constructor to create a new Fraction object, which is then stored in the value field.
 class NumLiteral:
     value: Fraction
     type: SimType = NumType()
-    def __init__(self, *args):
-        self.value = Fraction(*args)
+    # def __init__(self, *args):
+    #     self.value = Fraction(*args)
+@dataclass
+class FloatLiteral:
+    value: float
+    type: SimType = FloatType()
 
 
 @dataclass
@@ -549,10 +607,6 @@ class Variable:
     type: Optional[SimType] = None
 
 
-@dataclass
-class StringLiteral:
-    word : str 
-    type: SimType = StringType()
 
 
 @dataclass
@@ -662,6 +716,11 @@ class FunCall:
     type: Optional[SimType] = None
 
 @dataclass
+class Lst:
+    params: List['AST']
+    type: Optional[SimType] = None
+
+@dataclass
 class FnObject:
     params: List['AST']
     body: 'AST'
@@ -684,13 +743,13 @@ class UnOp:
     operator: str 
     expr='AST'
 
-AST = NumLiteral |BoolLiteral | StringLiteral | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd
+AST = NumLiteral |BoolLiteral | FloatLiteral | StringLiteral | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | UBoolOp | LetAnd | Lst
 # TypedAST = NewType('TypedAST', AST)
 class InvalidProgram(Exception):
     pass
 
 # new code start
-Value = Fraction | bool | str
+Value = Fraction | bool | str | float
 
 
 class Environment:
@@ -748,10 +807,10 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return value
         case BoolLiteral(value):
             return value
-
+        case FloatLiteral(value):
+            return value
         case StringLiteral(word):
             return word
-
         case Variable(name):
             return environment.get(name)
             
@@ -773,6 +832,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
             environment.enter_scope()
             environment.add(name,v1)
             v2=eval_(e2)
+            print(environment.env)
             environment.exit_scope()
             return v2
         
@@ -876,6 +936,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return eval_(left) < eval_(right)
         case BinOp("=", left,right):
             return eval_(left) == eval_(right)
+        case BinOp ("^",left,right):
+            return eval_(left) ** eval_(right)
         case BinOp ("or",left,right):
             return eval_(left) or eval_(right)
         case BinOp("and",left,right):
@@ -918,6 +980,12 @@ def eval(program: AST, environment: Environment = None) -> Value:
             print(environment.env)
             print(v1)
             return v1
+        
+        case Lst(params):
+            res=[]
+            for i in params:
+                res.append(i.value)
+            return res
 
     raise InvalidProgram()
 
@@ -933,6 +1001,8 @@ def typecheck(program: AST, environment: Environment = None) -> AST:
         return typecheck(program, environment)
     match program:
         case NumLiteral() as t: # already typed.
+            return t
+        case FloatLiteral() as t: # already typed.
             return t
         case BoolLiteral() as t: # already typed.
             return t
@@ -1077,6 +1147,8 @@ def typecheck(program: AST, environment: Environment = None) -> AST:
             environment.exit_scope()
             return LetAnd(tname1,newExp1,tname2,newExp2,newExp3, newExp3.type)
         
+        
+        
     raise TypeError()
 
 def test_typecheck():
@@ -1099,13 +1171,13 @@ def test_parse():
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
     #10
-    x=input()
-    print(x)
-    y=parse(x)
-    print("y-> ",y)
-    print("ans-> ", eval(y))
+    # x=input()
+    # print(x)
+    # y=parse(x)
+    # print("y-> ",y)
+    # print("ans-> ", eval(y))
 
-    # file=open(sys.argv[1],'r')
+    file=open(sys.argv[1],'r')
     #11
     # x=input()
     # x=file.read()
@@ -1125,30 +1197,30 @@ def test_parse():
     #     print("y-> ",y)
     #     print("ans-> ",eval(y))
     #13
-    # x=file.read()
-    # result = []
-    # parens = 0
-    # buff = ""
-    # for c in x:
-    #     if c == "{":
-    #         parens += 1
-    #     if parens > 0:
-    #         if c == "{":
-    #             pass
-    #         elif c == "}":
-    #             pass
-    #         else:
-    #             buff += c
-    #     if c == "}":
-    #         parens -= 1
-    #     if not parens and buff:
-    #         result.append(buff)
-    #         buff = ""
-    # for i, r in enumerate(result):
-    #     print(i,r)
-    #     y=parse(r)
-    #     print("y-> ",y)
-    #     print("ans-> ",eval(y))
+    x=file.read()
+    result = []
+    parens = 0
+    buff = ""
+    for c in x:
+        if c == "{":
+            parens += 1
+        if parens > 0:
+            if c == "{":
+                pass
+            elif c == "}":
+                pass
+            else:
+                buff += c
+        if c == "}":
+            parens -= 1
+        if not parens and buff:
+            result.append(buff)
+            buff = ""
+    for i, r in enumerate(result):
+        print(i,r)
+        y=parse(r)
+        print("y-> ",y)
+        print("ans-> ",eval(y))
 
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
     # print(parse("if a+b > 2*d then a*b - c + d else e*f/g end"))
@@ -1235,9 +1307,9 @@ def tail(lst):
 
 
 # Test the operations
-print(is_empty(my_list))   # False
-print(head(my_list))      # NumLiteral(1)
-print(tail(my_list))      # List([NumLiteral(2), NumLiteral(3)])
+# print(is_empty(my_list))   # False
+# print(head(my_list))      # NumLiteral(1)
+# print(tail(my_list))      # List([NumLiteral(2), NumLiteral(3)])
 
 # Input list is empty or not
 # def is_list_empty(list_to_check):
@@ -1509,4 +1581,6 @@ def test_typecheck1():
 # print("test_UBoolOp2(): ",test_UBoolOp2())
 # print("test_typecheck(): ",test_typecheck())
 # print("test_list() ",test_list()) 
-print("test-str-concatenation() ",test_str_concatenation())
+
+# print("test-str-concatenation() ",test_str_concatenation())
+

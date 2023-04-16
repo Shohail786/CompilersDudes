@@ -1,4 +1,45 @@
-{func f(n) if n=1 or n=0 then 1 else funCall f(n-1)*n end , funCall f(6)
+{
+    seq assign a is 10; 
+        if a%3=0 
+        then 
+            if a%5=0 
+            then printing "fizzbuzz" end 
+            else printing "fizz" end
+            end    
+        else
+            if a%5=0
+            then printing "buzz" end
+            else 0
+            end
+        end
+    end
 }
-{printing "hello" end}
-{let a is 31 in while a>0 }
+
+{
+seq 
+    assign ans is 1;
+    assign finalno is 1;
+    assign n is 1000000;
+    assign count is 0;
+    assign x is n;
+    assign nn is 5*n/7;
+    while n>nn do
+        seq
+            put n is n-1 end;
+            put count is 0 end;
+            put x is n end;
+            while x>1 do
+                seq 
+                    if x%2=0 then put x is x/2 end else put x is 3*x + 1 end 
+                    end;
+                    put count is count+1 end
+                end
+            done;
+            if count>ans then seq put ans is count end; put finalno is n end end else put ans is ans end
+            end
+        end
+    done;
+
+    printing finalno end
+end
+}
