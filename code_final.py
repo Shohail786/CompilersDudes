@@ -36,6 +36,7 @@ class Stream:
 
 # Define the token types.
 
+
 @dataclass
 class Num:
     n: int
