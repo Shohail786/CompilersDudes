@@ -1,3 +1,4 @@
+
 {let a is 1 in let b is 0 in seq while a<11 do seq put b is 
 a+b end ;put a is a+1 end; printing a end
  end done; printing b end end end end}
@@ -12,3 +13,50 @@ a+b end ;put a is a+1 end; printing a end
 {seq assign a is 5 ; printing get a end end}
 { func f(a,b,c) a*a+b*b+c*c , funCall f (5,6,7)
 }
+
+{
+    seq assign a is 10; 
+        if a%3=0 
+        then 
+            if a%5=0 
+            then printing "fizzbuzz" end 
+            else printing "fizz" end
+            end    
+        else
+            if a%5=0
+            then printing "buzz" end
+            else 0
+            end
+        end
+    end
+}
+
+{
+seq 
+    assign ans is 1;
+    assign finalno is 1;
+    assign n is 1000000;
+    assign count is 0;
+    assign x is n;
+    assign nn is 5*n/7;
+    while n>nn do
+        seq
+            put n is n-1 end;
+            put count is 0 end;
+            put x is n end;
+            while x>1 do
+                seq 
+                    if x%2=0 then put x is x/2 end else put x is 3*x + 1 end 
+                    end;
+                    put count is count+1 end
+                end
+            done;
+            if count>ans then seq put ans is count end; put finalno is n end end else put ans is ans end
+            end
+        end
+    done;
+
+    printing finalno end
+end
+}
+
