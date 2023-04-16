@@ -66,7 +66,7 @@ Token = Num | Bool | String |Keyword | Identifier | Operator | EndOfTokens
 
 
 keywords = "str bool if then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall assign".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ; , % ( )".split()
+symbolic_operators = "+ - * / < > ≤ ≥ = ≠ % ; , % ( )".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
 
