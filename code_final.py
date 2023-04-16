@@ -63,7 +63,7 @@ Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens
 
 
 keywords = "if then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall assign".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ; , % ( )".split()
+symbolic_operators = "+ - * / ^ | < > ≤ ≥ = ≠ ; , % ( )".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
 
@@ -419,14 +419,33 @@ class Parser:
                     break
         return left
 
-    def parse_cmp(self):
+    def parse_bitor(self):
         left = self.parse_add()
+        match self.lexer.peek_token():
+            case Operator("|"):
+                self.lexer.advance()
+                right = self.parse_add()
+                return BinOp("|", left, right)
+        return left
+
+    def parse_bitxor(self):
+        left = self.parse_bitor()
+        match self.lexer.peek_token():
+            case Operator("^"):
+                self.lexer.advance()
+                right = self.parse_bitor()
+                return BinOp("^", left, right)
+        return left
+
+    def parse_cmp(self):
+        left = self.parse_bitxor()
         match self.lexer.peek_token():
             case Operator(op) if op in "<>=":
                 self.lexer.advance()
-                right = self.parse_add()
+                right = self.parse_bitxor()
                 return BinOp(op, left, right)
         return left
+
     def parse_not(self):
         
         match self.lexer.peek_token():
@@ -453,7 +472,9 @@ class Parser:
                 return BinOp("and", left, right)
         return left
 
+    
 
+    
     def parse_simple(self):
         return self.parse_and()
 
@@ -513,8 +534,8 @@ SimType = NumType | BoolType | StringType
 class NumLiteral:
     value: Fraction
     type: SimType = NumType()
-    def __init__(self, *args):
-        self.value = Fraction(*args)
+    # def __init__(self, *args):
+        # self.value = Fraction(*args)
 
 
 @dataclass
@@ -874,6 +895,10 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return eval_(left) or eval_(right)
         case BinOp("and",left,right):
             return eval_(left) and eval_(right)
+        case BinOp("|",left,right):
+            return eval_(left) | eval_(right)
+        case BinOp("^",left,right):
+            return eval_(left) ^ eval_(right)
         case UnOp("not", expr):
             return not(eval_(expr))
         
@@ -1096,7 +1121,7 @@ def run_shell(text):
     result.append(text)
     for i, r in enumerate(result):
         y=parse(r)
-        print("AST -> ", y)
+        # print("AST -> ", y)
         print("Output -> ",eval(y))
 
 def test_parse():
