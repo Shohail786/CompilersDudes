@@ -1154,6 +1154,7 @@ def test_parse():
         )
     #10
 
+
     x=input()
     print(x)
     y=parse(x)
@@ -1165,6 +1166,7 @@ def test_parse():
 
 
     # file=open(sys.argv[1],'r')
+
 
     # x=input()
     # print(x)
@@ -1192,7 +1194,6 @@ def test_parse():
     #     print("y-> ",y)
     #     print("ans-> ",eval(y))
     #13
-
     # x=file.read()
     # result = []
     # parens = 0
@@ -1218,8 +1219,7 @@ def test_parse():
     #     print("y-> ",y)
     #     print("ans-> ",eval(y))
 
-    # end = time.time()
-    # print(end - start)
+   
 
     
 
@@ -1234,14 +1234,15 @@ def test_parse():
     # print("c ",c)
     # print(eval(c))
     # code1.eval(parse("if a+b > 2*d then a*b - c + d else e*f/g end"))
-# import time 
-# start = time.time_ns()
+
+
 # test_parse() # Uncomment to see the created ASTs.
 if(len(sys.argv) > 1):
     print("parse  ",test_parse())
 # print(test_typecheck())
-# end = time.time_ns()
-# print("time: ", end-start, "ns")
+
+
+
 
 # Original defination
 # cons adds an item to the beginning of the list. If the list is empty, it creates a new list with the item as its only element. Otherwise, it creates a new list with the item as the first element and the rest of the original list as the remaining elements.

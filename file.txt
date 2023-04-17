@@ -1,5 +1,4 @@
 
-
 {
 seq 
     assign ans is 1;
