@@ -1103,9 +1103,11 @@ def test_parse():
         return Parser.parse_expr (
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
+
     #10
     x=input()
     print(x)
+
     y=parse(x)
     print("y-> ",y)
     print("ans-> ", eval(y))
@@ -1187,6 +1189,7 @@ def test_eval():
 #     end = NumLiteral(4)
 #     expr = Str_slicing(str1,start,end)
 #     assert eval(expr) == 'abcd'
+
 def test_string_slicing():
     program = Str_slicing(StringLiteral("Hello, world!"), NumLiteral(0), NumLiteral(5))
     # program = Str_slicing("Hello, world!", NumLiteral(0), NumLiteral(5))

@@ -1,4 +1,5 @@
 
+
 {
 seq 
     assign ans is 1;
@@ -27,3 +28,4 @@ seq
     printing finalno end
 end
 }
+
