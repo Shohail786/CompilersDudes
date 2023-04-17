@@ -1,2 +1,30 @@
-{ 4|1 }
-{ 4^1 }
+
+{
+seq 
+    assign ans is 1;
+    assign finalno is 1;
+    assign n is 10;
+    assign count is 0;
+    assign x is n;
+    assign nn is n/2;
+    while n>nn do
+        seq
+            put n is n-1 end;
+            put count is 0 end;
+            put x is n end;
+            while x>1 do
+                seq 
+                    if x%2=0 then put x is x/2 end else put x is 3*x + 1 end 
+                    end;
+                    put count is count+1 end
+                end
+            done;
+            if count>ans then seq put ans is count end; put finalno is n end end else put ans is ans end
+            end
+        end
+    done;
+
+    printing finalno end
+end
+}
+
