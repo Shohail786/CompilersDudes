@@ -1,28 +1,12 @@
-{
-    seq assign a is 10; 
-        if a%3=0 
-        then 
-            if a%5=0 
-            then printing "fizzbuzz" end 
-            else printing "fizz" end
-            end    
-        else
-            if a%5=0
-            then printing "buzz" end
-            else 0
-            end
-        end
-    end
-}
 
 {
 seq 
     assign ans is 1;
     assign finalno is 1;
-    assign n is 1000000;
+    assign n is 10;
     assign count is 0;
     assign x is n;
-    assign nn is 5*n/7;
+    assign nn is n/2;
     while n>nn do
         seq
             put n is n-1 end;
