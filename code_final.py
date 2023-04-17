@@ -1124,6 +1124,7 @@ def run_shell(text):
         # print("AST -> ", y)
         print("Output -> ",eval(y))
 
+
 def test_parse():
     def parse(string):
         #First, the parse function creates a Stream object from the 
@@ -1178,9 +1179,9 @@ def test_parse():
             result.append(buff)
             buff = ""
     for i, r in enumerate(result):
-        print(i,r)
+        # print(i,r)
         y=parse(r)
-        print("y-> ",y)
+        # print("y-> ",y)
         print("ans-> ",eval(y))
         
 
@@ -1195,12 +1196,14 @@ def test_parse():
     # print("c ",c)
     # print(eval(c))
     # code1.eval(parse("if a+b > 2*d then a*b - c + d else e*f/g end"))
-
+import time 
+start = time.time_ns()
 # test_parse() # Uncomment to see the created ASTs.
 if(len(sys.argv) > 1):
     print("parse  ",test_parse())
 # print(test_typecheck())
-
+end = time.time_ns()
+print("time: ", end-start)
 
 # Original defination
 # cons adds an item to the beginning of the list. If the list is empty, it creates a new list with the item as its only element. Otherwise, it creates a new list with the item as the first element and the rest of the original list as the remaining elements.
