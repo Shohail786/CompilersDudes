@@ -1,8 +1,12 @@
 from fractions import Fraction
+from integer import Integer
 from dataclasses import dataclass
 from typing import Optional, NewType
 from typing import List
 import sys
+import time
+
+
 
 
 # A minimal example to illustrate typechecking.
@@ -42,12 +46,14 @@ class Num:
 @dataclass
 class Float:
     n:float
+
 @dataclass
 class Bool:
     b: bool
 @dataclass
 class String:
     word: str
+
 @dataclass
 class Keyword:
     word: str
@@ -64,11 +70,12 @@ class Operator:
 class EndOfTokens():
     pass
 
-Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens | Float
+Token = Num | Bool |Float | String |Keyword | Identifier | Operator | EndOfTokens
 
 
-keywords = "str bool if then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall assign".split()
-symbolic_operators = "+ - * / < > ≤ ≥ = ≠ ; , % ( )".split()
+
+keywords = "str bool if lst then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall assign".split()
+symbolic_operators = "+ - * ^ / & < > ≤ ≥ = ≠ ; , % [ ] ( )".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
 
@@ -116,7 +123,6 @@ class Lexer:
                         return String(s)
                     except EndOfStream:
                         raise TokenError()
-                    
                 case c if c.isdigit():
                     n = int(c)
                     flag=0
@@ -135,11 +141,17 @@ class Lexer:
                                 n = n*(10**count) + int(c)
                                 n=n/(10**count)
 
-                            else:
+                            elif flag==0:
                                 self.stream.unget()
                                 return Num(n)
+                            elif flag==1:
+                                self.stream.unget()
+                                return Float(n)
                         except EndOfStream:
-                            return Num(n)
+                            if flag==1:
+                              return Float(n)
+                            else:
+                                return Num(n)
                 case c if c.isalpha():
                     s = c
                     while True:
@@ -292,18 +304,39 @@ class Parser:
         self.lexer.match(Keyword("end"))
         return Put(v,e)
     
+    def parse_lst(self):
+        self.lexer.match(Keyword("lst"))
+        self.lexer.match(Operator("["))
+        params=[]
+        while True:
+            match self.lexer.peek_token():
+                case Operator("]"):
+                    self.lexer.advance()
+                    break
+                case _:
+                    while True:
+                        params.append(self.parse_expr())
+                        match self.lexer.peek_token():
+                            case Operator(","):
+                                self.lexer.advance()
+                                continue
+                            case _:
+                                break
+        return Lst(params)    
+
+
     def parse_get(self):
         self.lexer.match(Keyword("get"))
         v=self.parse_expr()
         return Get(v)
-
+    
     def parse_assign(self):
         self.lexer.match(Keyword("assign"))
         v1=self.parse_expr()
         self.lexer.match(Keyword("is"))
         v2=self.parse_expr()
         return Assign(v1,v2)
-        
+
     def parse_printing(self):
         self.lexer.match(Keyword("printing"))
         v=self.parse_expr()
@@ -336,10 +369,10 @@ class Parser:
         self.lexer.match(Operator(";"))
         e=self.parse_expr()
         self.lexer.match(Keyword("end"))
+        
         return for_loop(a,b,c,d,e)
 
     def parse_LetFun(self):
-           
         self.lexer.match(Keyword("func"))
         a=self.parse_expr()
         self.lexer.match(Operator("("))
@@ -395,6 +428,9 @@ class Parser:
             case Num(value):
                 self.lexer.advance()
                 return NumLiteral(value)
+            case Float(value):
+                self.lexer.advance()
+                return FloatLiteral(value)
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
@@ -403,15 +439,24 @@ class Parser:
             case String(word):
                 self.lexer.advance()
                 return StringLiteral(word)
-
-    
-    def parse_mult(self):
+            
+    def parse_exp(self):
         left = self.parse_atom()
+        match self.lexer.peek_token():
+            case Operator("^"):
+                self.lexer.advance()
+                right = self.parse_atom()
+                return BinOp("^", left, right)
+            case _:
+                return left
+
+    def parse_mult(self):
+        left = self.parse_exp()
         while True:
             match self.lexer.peek_token():
                 case Operator(op) if op in "*/%":
                     self.lexer.advance()
-                    m = self.parse_atom()
+                    m = self.parse_exp()
                     left = BinOp(op, left, m)
                 case _:
                     break
@@ -462,7 +507,7 @@ class Parser:
                 right = self.parse_or()
                 return BinOp("and", left, right)
         return left
-
+    
 
     def parse_simple(self):
         return self.parse_and()
@@ -501,6 +546,10 @@ class Parser:
                 return self.parse_LetFun()
             case Keyword("funCall"):
                 return self.parse_FunCall()
+            case Keyword("return"):
+                return self.parse_Return()
+            case Keyword("lst"):
+                return self.parse_lst()
             case _:
                 return self.parse_simple()
             
@@ -510,21 +559,28 @@ class NumType:
     pass
 
 @dataclass
+class FloatType:
+    pass
+@dataclass
 class BoolType:
     pass
 @dataclass
 class StringType:
     pass
 
-SimType = NumType | BoolType | StringType
+SimType = NumType | BoolType | StringType| FloatType
 
 @dataclass
 #  The _init_ method takes any number of arguments and passes them to the Fraction constructor to create a new Fraction object, which is then stored in the value field.
 class NumLiteral:
     value: Fraction
     type: SimType = NumType()
-    def __init__(self, *args):
-        self.value = Fraction(*args)
+    # def __init__(self, *args):
+    #     self.value = Fraction(*args)
+@dataclass
+class FloatLiteral:
+    value: float
+    type: SimType = FloatType()
 
 
 @dataclass
@@ -554,10 +610,6 @@ class Variable:
     type: Optional[SimType] = None
 
 
-@dataclass
-class StringLiteral:
-    word : str 
-    type: SimType = StringType()
 
 
 @dataclass
@@ -667,6 +719,17 @@ class FunCall:
     type: Optional[SimType] = None
 
 @dataclass
+class Index:
+    fn:'AST'
+    args: List['AST']
+    type: Optional[SimType] = None
+
+@dataclass
+class Lst:
+    params: List['AST']
+    type: Optional[SimType] = None
+
+@dataclass
 class FnObject:
     params: List['AST']
     body: 'AST'
@@ -689,13 +752,13 @@ class UnOp:
     operator: str 
     expr='AST'
 
-AST = NumLiteral |BoolLiteral | StringLiteral | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd
+AST = NumLiteral |BoolLiteral | FloatLiteral | StringLiteral | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | UBoolOp | LetAnd | Lst | Index
 # TypedAST = NewType('TypedAST', AST)
 class InvalidProgram(Exception):
     pass
 
 # new code start
-Value = Fraction | bool | str
+Value = Fraction | bool | str | float
 
 
 class Environment:
@@ -753,10 +816,10 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return value
         case BoolLiteral(value):
             return value
-
+        case FloatLiteral(value):
+            return value
         case StringLiteral(word):
             return word
-
         case Variable(name):
             return environment.get(name)
             
@@ -769,17 +832,16 @@ def eval(program: AST, environment: Environment = None) -> Value:
 
         case Assign(Variable(name),e1):
             environment.add(name,eval_(e1))
+            print(environment.env)
             return name
 
 
         case Let(Variable(name), e1, e2) | LetMut(Variable(name),e1, e2):
-
             v1 = eval_(e1)
-            print(v1)
-            print(e1)
             environment.enter_scope()
             environment.add(name,v1)
             v2=eval_(e2)
+            print(environment.env)
             environment.exit_scope()
             return v2
         
@@ -838,16 +900,20 @@ def eval(program: AST, environment: Environment = None) -> Value:
             v=eval_(fn.body)
             environment.exit_scope()
             return v
+        
+        case Index(Variable(name),args):
+            fn=environment.get(name) 
+            return fn[args]
             
         case UBoolOp(expr):
-            if expr.type==NumType():
+            if typecheck(expr).type==NumType():
                     v1=eval_(expr)
                     if v1 !=0:
                         
                         return True
                     else:
                         return False
-            elif expr.type==StringType():
+            elif typecheck(expr).type==StringType():
                     v1=eval_(expr)
                     if v1 == "":
                         return False
@@ -883,6 +949,8 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return eval_(left) < eval_(right)
         case BinOp("=", left,right):
             return eval_(left) == eval_(right)
+        case BinOp ("^",left,right):
+            return eval_(left) ** eval_(right)
         case BinOp ("or",left,right):
             return eval_(left) or eval_(right)
         case BinOp("and",left,right):
@@ -911,6 +979,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case for_loop(Variable(name),e1,condition,updt,body):
             environment.enter_scope()
             environment.add(name,eval_(e1))
+            print(environment.env)
             vcond=eval_(condition)
             while(vcond):
                 v1=eval_(body)
@@ -921,8 +990,15 @@ def eval(program: AST, environment: Environment = None) -> Value:
         
         case Print(e1):
             v1=eval_(e1)
+            print(environment.env)
             print(v1)
             return v1
+        
+        case Lst(params):
+            res=[]
+            for i in params:
+                res.append(i.value)
+            return res
 
     raise InvalidProgram()
 
@@ -938,6 +1014,8 @@ def typecheck(program: AST, environment: Environment = None) -> AST:
         return typecheck(program, environment)
     match program:
         case NumLiteral() as t: # already typed.
+            return t
+        case FloatLiteral() as t: # already typed.
             return t
         case BoolLiteral() as t: # already typed.
             return t
@@ -1082,6 +1160,8 @@ def typecheck(program: AST, environment: Environment = None) -> AST:
             environment.exit_scope()
             return LetAnd(tname1,newExp1,tname2,newExp2,newExp3, newExp3.type)
         
+        
+        
     raise TypeError()
 
 def test_typecheck():
@@ -1103,14 +1183,16 @@ def test_parse():
         return Parser.parse_expr (
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
-
     #10
     x=input()
     print(x)
-
     y=parse(x)
     print("y-> ",y)
     print("ans-> ", eval(y))
+   
+    # start = time.time()
+
+
 
     # file=open(sys.argv[1],'r')
     #11
@@ -1131,7 +1213,7 @@ def test_parse():
     #     y=parse(x)
     #     print("y-> ",y)
     #     print("ans-> ",eval(y))
-    # 13
+    #13
     # x=file.read()
     # result = []
     # parens = 0
@@ -1157,6 +1239,9 @@ def test_parse():
     #     print("y-> ",y)
     #     print("ans-> ",eval(y))
 
+    # end = time.time()
+    # print(end - start)
+
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
     # print(parse("if a+b > 2*d then a*b - c + d else e*f/g end"))
     # print(parse("if 10*5 > 6*6 then 10*5 else 6*6 end"))
@@ -1172,6 +1257,129 @@ def test_parse():
 # test_parse() # Uncomment to see the created ASTs.
 print("parse  ",test_parse())
 # print(test_typecheck())
+
+
+# Original defination
+# cons adds an item to the beginning of the list. If the list is empty, it creates a new list with the item as its only element. Otherwise, it creates a new list with the item as the first element and the rest of the original list as the remaining elements.
+# is-empty? returns true if the list is empty and false otherwise.
+# head returns the first element of the list.
+# tail returns a new list containing all elements of the original list except for the first one.
+
+# My defination
+#Introduced a dataclass for lists with cons, is_empty, head, and tail.
+# cons - Adding an element in the list
+# is_empty - checks if a list is empty or not
+# head - First element in the list using indexing
+# tail - Creates a list of elements except the first one using indexing
+
+@dataclass
+class List:
+    def __init__(self, elements=None):
+        self.elements = elements or []
+
+    def cons(self, element):
+        self.elements.append(element)
+
+    def is_empty(self):
+        return not bool(self.elements)
+
+    def head(self):
+        if self.is_empty():
+            return None
+        return self.elements[0]
+
+    def tail(self):
+        if self.is_empty():
+            return None
+        return self.elements[1:]
+
+environment = Environment()
+
+# Define the 'eval_list' function
+def eval_list(lst, env):
+    result = []
+    for i in range(len(lst.elements)):
+        result.append(eval(lst.elements[i], env))
+    return List(result)
+
+# Create a list and evaluate it
+my_list = List([NumLiteral(1), NumLiteral(2), NumLiteral(3)])
+v = eval_list(my_list, environment)
+
+# Add the result to the environment
+environment.add("my_list", v)
+
+# Define the 'is_empty' operation for the List class
+def is_empty(lst):
+    return len(lst.elements) == 0
+
+# Define the 'head' operation for the List class
+def head(lst):
+    if is_empty(lst):
+        raise Exception("List is empty")
+    return lst.elements[0]
+
+# Define the 'tail' operation for the List class
+def tail(lst):
+    if is_empty(lst):
+        raise Exception("List is empty")
+    return List(lst.elements[1:])
+
+
+# Test the operations
+# print(is_empty(my_list))   # False
+# print(head(my_list))      # NumLiteral(1)
+# print(tail(my_list))      # List([NumLiteral(2), NumLiteral(3)])
+
+# Input list is empty or not
+# def is_list_empty(list_to_check):
+#     return list_to_check == []
+
+
+# Creating a empty list and adding elements to it using cons function
+def test_list():
+    lst = List()
+    lst.cons(1)
+    lst.cons(2)
+    lst.cons(3)
+
+    print(lst.is_empty()) # False
+    print(lst.head()) # 1
+    print(lst.tail()) # [2, 3]
+
+# Using For loop to ietrate over lists.
+def test_list1():
+    lst = List()
+    lst.cons(1)
+    lst.cons(2)
+    lst.cons(3)
+
+    print(lst.is_empty()) # False
+    print(lst.head()) # 1
+    print(lst.tail()) # [2, 3]
+
+    # empty_list = []
+    # non_empty_list = [1, 2, 3]
+    # print(is_list_empty(empty_list)) # True 
+    # print(is_list_empty(non_empty_list)) # False
+
+    # list1=[]
+    # if (list1[0]!=None):
+    #     print("Empty string")
+    # else:
+    #     e1=NumLiteral(list[1])
+    #     e2=NumLiteral(list[2])
+    #     e5=BinOp("*",e2,e1)
+    #     e6=BinOp("+",e2,e1)
+    #     e7=BinOp("/",e2,e1)
+    #     e8=BinOp("-",e2,e1)
+    #     assert eval(e5) == 6    
+    #     assert eval(e6) == 5
+    #     assert eval(e7) == 0.66
+    #     assert eval(e8) == -1
+
+    # print(list1[1])
+
 
 def test_eval():
     e1 = NumLiteral(2)
@@ -1189,7 +1397,6 @@ def test_eval():
 #     end = NumLiteral(4)
 #     expr = Str_slicing(str1,start,end)
 #     assert eval(expr) == 'abcd'
-
 def test_string_slicing():
     program = Str_slicing(StringLiteral("Hello, world!"), NumLiteral(0), NumLiteral(5))
     # program = Str_slicing("Hello, world!", NumLiteral(0), NumLiteral(5))
@@ -1292,7 +1499,6 @@ def test_str_concatenation():
     assert eval(expr) == 'abcd'
 
 
-
 # print(test_eval())
 # print(test_if_else_eval())
 # print(test_let_eval())
@@ -1360,6 +1566,7 @@ def test_UBoolOp2():
     e3=UBoolOp(e1)
     print(eval(e3))
     assert eval(e3)==False
+#final code
 
 def test_typecheck():
     t1=BinOp("-",NumLiteral(5),NumLiteral(3))
@@ -1393,3 +1600,7 @@ def test_typecheck1():
 # print("test_UBoolOp1(): ",test_UBoolOp1())
 # print("test_UBoolOp2(): ",test_UBoolOp2())
 # print("test_typecheck(): ",test_typecheck())
+# print("test_list() ",test_list()) 
+
+# print("test-str-concatenation() ",test_str_concatenation())
+

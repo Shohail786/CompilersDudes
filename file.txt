@@ -1,19 +1,35 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9483194e57d0162c1503c71779bb338afa28e019
 {
 seq 
     assign ans is 1;
     assign finalno is 1;
+<<<<<<< HEAD
     assign n is 100000;
     assign count is 0;
     assign x is n;
     assign nn is n;
     while n>1 do
+=======
+    assign n is 10;
+    assign count is 0;
+    assign x is n;
+    assign nn is n/2;
+    while n>nn do
+>>>>>>> 9483194e57d0162c1503c71779bb338afa28e019
         seq
             put n is n-1 end;
             put count is 0 end;
             put x is n end;
             while x>1 do
                 seq 
+<<<<<<< HEAD
                     if x&1=0 then put x is x/2 end else put x is 3*x + 1 end 
+=======
+                    if x%2=0 then put x is x/2 end else put x is 3*x + 1 end 
+>>>>>>> 9483194e57d0162c1503c71779bb338afa28e019
                     end;
                     put count is count+1 end
                 end
@@ -25,4 +41,9 @@ seq
 
     printing finalno end
 end
+<<<<<<< HEAD
 }
+=======
+}
+
+>>>>>>> 9483194e57d0162c1503c71779bb338afa28e019
