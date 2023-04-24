@@ -66,7 +66,7 @@ class EndOfTokens():
 Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens | String
 
 
-keywords = "if then else end while do done let is in letMut letAnd strlength of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
+keywords = "if then else end while do done let is in letMut letAnd strlength reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
 symbolic_operators = "+ - * & / < > ≤ ≥ = ≠ ; , % ( ) [ ]".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
@@ -317,6 +317,15 @@ class Parser:
         self.lexer.match(Keyword("is"))
         v2=self.parse_expr()
         return Assign(v1,v2)
+    
+    def parse_revstring(self):
+        self.lexer.match(Keyword("reversestr"))
+        # print("t0")
+        self.lexer.match(Operator("("))
+        # print("t1")
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return revstring(b)
 
     def parse_StrSlice(self):
         self.lexer.match(Keyword("slice"))
@@ -344,9 +353,9 @@ class Parser:
         # self.lexer.match(Keyword("is"))
         # print("t0")
         self.lexer.match(Keyword("strlength"))
-        print("t0")
+        # print("t0")
         self.lexer.match(Operator("("))
-        print("t1")
+        # print("t1")
         b = self.parse_expr()
         self.lexer.match(Operator(")"))
         # self.lexer.match(Operator("("))
@@ -375,6 +384,23 @@ class Parser:
         self.lexer.match(Operator(")"))
         return popelem(b)
 
+    def parse_vowelcount(self):
+        self.lexer.match(Keyword("vowelnumb"))
+        self.lexer.match(Operator("("))
+        # print("t1")
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return vowelcount(b)
+    
+    def parse_stringindex(self):
+        self.lexer.match(Keyword("stringidx"))
+        self.lexer.match(Operator("("))
+        # print("t1")
+        a = self.parse_expr()
+        self.lexer.match(Operator(","))
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return stringindex(a,b)
 
     def parse_printing(self):
         self.lexer.match(Keyword("printing"))
@@ -471,7 +497,14 @@ class Parser:
                 self.lexer.advance()
                 return BoolLiteral(value)
             case Keyword("funCall"):     
-                 return self.parse_FunCall()
+                return self.parse_FunCall()
+            case Operator(op = '('):
+                self.lexer.advance()
+                expr_ = self.parse_add()
+                match self.lexer.peek_token():
+                    case Operator(op = ')'):
+                        self.lexer.advance()
+                        return expr_
             case String(word):
                 self.lexer.advance()
                 return StringLiteral(word)
@@ -500,6 +533,10 @@ class Parser:
                 case _:
                     break
         return left
+    
+    
+
+            
     
     def parse_bitand(self):
         left = self.parse_add()
@@ -595,6 +632,12 @@ class Parser:
                 return self.parse_stringlen()
             case Keyword("popval"):
                 return self.parse_popelem()
+            case Keyword("vowelnumb"):
+                return self.parse_vowelcount()
+            case Keyword("stringidx"):
+                return self.parse_stringindex()
+            case Keyword("reversestr"):
+                return self.parse_revstring()
             case _:
                 return self.parse_simple()
             
@@ -712,7 +755,6 @@ class LetMut:
     var: 'AST'
     e1: 'AST'
     e2: 'AST'
-    type: Optional[SimType] = None
 
 
 @dataclass
@@ -803,6 +845,22 @@ class popelem():
     list1: List['AST']
     type: Optional[SimType] = None
 
+@dataclass
+class vowelcount():
+    word: str
+
+@dataclass
+class stringindex():
+    word: str
+    var1: int
+    type: Optional[SimType] = None
+
+@dataclass
+class revstring():
+    word: str
+
+
+
     # def __init__(self, elements=None):
     #     self.elements = elements or []
 
@@ -856,7 +914,7 @@ class popelem():
 
 
 
-AST = NumLiteral | BoolLiteral | StringLiteral | ListLiteral | popelem | stringlen | Cons | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation
+AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation
 # TypedAST = NewType('TypedAST', AST)
 class InvalidProgram(Exception):
     pass
@@ -914,7 +972,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
 
     def eval_(program):
         return eval(program, environment) 
-       
+    
     match program:
         case NumLiteral(value):
             return value
@@ -944,6 +1002,14 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case stringlen(word):
             str1 = eval_(word)
             return len(str1)
+        
+        case vowelcount(word):
+            str1 = eval_(word)
+            count  = 0
+            for ele in str1:
+                if(ele=='a' or ele=='e' or ele=='i' or ele=='o' or ele=='u'):
+                    count = count +1
+            return count
 
         case Cons(Variable(name),word):
             # print("hello")
@@ -960,6 +1026,13 @@ def eval(program: AST, environment: Environment = None) -> Value:
             environment.update(name,List1)
 
             return environment.get(name)
+        
+        case revstring(word):
+            str1 = eval_(word)
+            result = ""
+            for i in range(len(str1)):
+                result = result + str1[len(str1)-i-1]
+            return result
 
         case Let(Variable(name), e1, e2) | LetMut(Variable(name),e1, e2):
             v1 = eval_(e1)
@@ -1001,13 +1074,13 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 environment.update(name1,v1)
                 
             else:
-               environment.add(name1,v1)
+                environment.add(name1,v1)
 
             if environment.check(name2):
                 environment.update(name2,v2)
                 
             else:
-               environment.add(name2,v2)
+                environment.add(name2,v2)
             
             v3=eval_(expr3)
             print(environment)
@@ -1033,7 +1106,12 @@ def eval(program: AST, environment: Environment = None) -> Value:
             v=eval_(fn.body)
             environment.exit_scope()
             return v
-            
+        
+        case stringindex(Variable(name),e1):
+            i = eval_(e1)
+            str1 = environment.get(name)
+            return str1[i]
+    
         case UBoolOp(expr):
             if typecheck(expr).type==NumType():
                     v1=eval_(expr)
@@ -1054,7 +1132,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case Two_Str_concatenation(str1,str2):
             result_str = eval_(str1) + eval_(str2)
             return result_str
-     
+    
 
         case Seq(body):
             v1=None
@@ -1270,13 +1348,13 @@ def typecheck(program: AST, environment: Environment = None) -> AST:
                 environment.update(name1,newExp1.type)
                 
             else:
-               environment.add(name1,newExp1.type)
+                environment.add(name1,newExp1.type)
 
             if environment.check(name2):
                 environment.update(name2,newExp2.type)
                 
             else:
-               environment.add(name2,newExp2.type)
+                environment.add(name2,newExp2.type)
             
             newExp3=typecheck_(expr3)
             environment.exit_scope()
