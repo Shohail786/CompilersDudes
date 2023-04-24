@@ -1,1 +1,1 @@
-{seq assign a is "hello"; printing strlength(a) end end}
+{seq assign a is List [1,3,4]; listappend 4 in a end}

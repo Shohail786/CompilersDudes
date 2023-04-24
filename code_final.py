@@ -5,7 +5,6 @@ from typing import List
 import sys
 import time
 
-
 # A minimal example to illustrate typechecking.
 
 class EndOfStream(Exception):
@@ -37,6 +36,7 @@ class Stream:
 
 # Define the token types.
 
+
 @dataclass
 class Num:
     n: int
@@ -66,17 +66,18 @@ class EndOfTokens():
 Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens | String
 
 
-keywords = "if then else end while do done let is in letMut letAnd seq anth put get printing for ubool func funCall assign".split()
-symbolic_operators = "+ - * / ^ | < > ≤ ≥ = ≠ ; , % ( )".split()
+keywords = "if then else end while do done let is in letMut letAnd strlength of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
+symbolic_operators = "+ - * & / < > ≤ ≥ = ≠ ; , % ( ) [ ]".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
 
 def word_to_token(word):
     if word in keywords:
-        print(word)
+        # print(word)
         return Keyword(word)
     
     if word in word_operators:
+        # print(word)
         return Operator(word)
     if word == "True":
         return Bool(True)
@@ -106,8 +107,6 @@ class Lexer:
                 #         self.stream.unget()
                 #         return Operator(">")
                 case c if c in symbolic_operators: 
-                    # d = Operator(c)
-                    # print(d)
                     return Operator(c)
                 
                 case '"':
@@ -367,6 +366,15 @@ class Parser:
         #                     case _:
         #                         break
         return stringlen(b)
+    
+    def parse_popelem(self):
+        self.lexer.match(Keyword("popval"))
+        self.lexer.match(Operator("("))
+        # print("t1")
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return popelem(b)
+
 
     def parse_printing(self):
         self.lexer.match(Keyword("printing"))
@@ -449,7 +457,7 @@ class Parser:
                                 break
         return FunCall(a,params)
 
-    # lexer.peek_token()
+
     def parse_atom(self):
         # checks the type of the next token
         match self.lexer.peek_token():
@@ -459,13 +467,6 @@ class Parser:
             case Num(value):
                 self.lexer.advance()
                 return NumLiteral(value)
-            case Operator(op = '('):
-                self.lexer.advance()
-                expr_ = self.parse_add()
-                match self.lexer.peek_token():
-                    case Operator(op = ')'):
-                        self.lexer.advance()
-                        return expr_
             case Bool(value):
                 self.lexer.advance()
                 return BoolLiteral(value)
@@ -474,6 +475,7 @@ class Parser:
             case String(word):
                 self.lexer.advance()
                 return StringLiteral(word)
+    
 
     def parse_mult(self):
         left = self.parse_atom()
@@ -487,17 +489,6 @@ class Parser:
                     break
         return left
 
-    # def factor(self):
-    #     while True:
-    #         match self.lexer.peek_token():
-    #             case Operator(op) if op in "(":
-    #                 self.lexer.advance()
-    #                 expr_ = self.parse_add()
-    #                 match self.lexer.peek_token():
-    #                     case Operator(op) if op in ")":
-    #                         self.lexer.advance()
-    #                         return expr_
-
     def parse_add(self):
         left = self.parse_mult()
         while True:
@@ -509,34 +500,27 @@ class Parser:
                 case _:
                     break
         return left
-
-    def parse_bitor(self):
+    
+    def parse_bitand(self):
         left = self.parse_add()
+        # print("no")
         match self.lexer.peek_token():
-            case Operator("|"):
+            case Operator("&"):
+                print("YES")
                 self.lexer.advance()
                 right = self.parse_add()
-                return BinOp("|", left, right)
+                return BinOp("&", left, right)
         return left
-
-    def parse_bitxor(self):
-        left = self.parse_bitor()
-        match self.lexer.peek_token():
-            case Operator("^"):
-                self.lexer.advance()
-                right = self.parse_bitor()
-                return BinOp("^", left, right)
-        return left
-
+    
     def parse_cmp(self):
-        left = self.parse_bitxor()
+        left = self.parse_bitand()
         match self.lexer.peek_token():
             case Operator(op) if op in "<>=":
                 self.lexer.advance()
-                right = self.parse_bitxor()
+                right = self.parse_bitand()
                 return BinOp(op, left, right)
         return left
-
+    
     def parse_not(self):
         
         match self.lexer.peek_token():
@@ -562,10 +546,8 @@ class Parser:
                 right = self.parse_or()
                 return BinOp("and", left, right)
         return left
-
     
 
-    
     def parse_simple(self):
         return self.parse_and()
 
@@ -611,6 +593,8 @@ class Parser:
                 return self.parse_ListLiteral()
             case Keyword("strlength"):
                 return self.parse_stringlen()
+            case Keyword("popval"):
+                return self.parse_popelem()
             case _:
                 return self.parse_simple()
             
@@ -634,7 +618,7 @@ class NumLiteral:
     value: Fraction
     type: SimType = NumType()
     # def __init__(self, *args):
-        # self.value = Fraction(*args)
+    #     self.value = Fraction(*args)
 
 
 @dataclass
@@ -776,17 +760,6 @@ class FunCall:
     args: List['AST']
     type: Optional[SimType] = None
 
-
-class Index:
-    fn:'AST'
-    args: List['AST']
-    type: Optional[SimType] = None
-
-@dataclass
-class Lst:
-    params: List['AST']
-    type: Optional[SimType] = None
-
 @dataclass
 class FnObject:
     params: List['AST']
@@ -823,6 +796,11 @@ class Cons():
 @dataclass
 class stringlen():
     word: str
+    type: Optional[SimType] = None
+
+@dataclass 
+class popelem():
+    list1: List['AST']
     type: Optional[SimType] = None
 
     # def __init__(self, elements=None):
@@ -878,7 +856,7 @@ class stringlen():
 
 
 
-AST = NumLiteral | BoolLiteral | StringLiteral | ListLiteral | stringlen | Cons | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | UBoolOp | LetAnd | Lst | Index| Str_slicing | Two_Str_concatenation
+AST = NumLiteral | BoolLiteral | StringLiteral | ListLiteral | popelem | stringlen | Cons | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation
 # TypedAST = NewType('TypedAST', AST)
 class InvalidProgram(Exception):
     pass
@@ -976,11 +954,19 @@ def eval(program: AST, environment: Environment = None) -> Value:
             
             return environment.get(name)
 
+        case popelem(Variable(name)):
+            List1=environment.get(name)
+            List1.pop()
+            environment.update(name,List1)
+
+            return environment.get(name)
+
         case Let(Variable(name), e1, e2) | LetMut(Variable(name),e1, e2):
             v1 = eval_(e1)
             environment.enter_scope()
             environment.add(name,v1)
             v2=eval_(e2)
+            print(environment)
             environment.exit_scope()
             return v2
         
@@ -1024,6 +1010,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
                environment.add(name2,v2)
             
             v3=eval_(expr3)
+            print(environment)
             environment.exit_scope()
             return v3
 
@@ -1046,10 +1033,6 @@ def eval(program: AST, environment: Environment = None) -> Value:
             v=eval_(fn.body)
             environment.exit_scope()
             return v
-        
-        case Index(Variable(name),args):
-            fn=environment.get(name) 
-            return fn[args]
             
         case UBoolOp(expr):
             if typecheck(expr).type==NumType():
@@ -1086,7 +1069,7 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case BinOp("*", left, right):
             return eval_(left) * eval_(right)
         case BinOp("/", left, right):
-            return eval_(left) / eval_(right)
+            return eval_(left) // eval_(right)
         case BinOp("%", left, right):
             return eval_(left) % eval_(right)
         case BinOp(">",left,right):
@@ -1099,14 +1082,14 @@ def eval(program: AST, environment: Environment = None) -> Value:
             return eval_(left) or eval_(right)
         case BinOp("and",left,right):
             return eval_(left) and eval_(right)
-        case BinOp("|",left,right):
-            return eval_(left) | eval_(right)
-        case BinOp("^",left,right):
-            return eval_(left) ^ eval_(right)
+        
+        case BinOp("&",left,right):
+            return eval_(left) & eval_(right)
+        
         case UnOp("not", expr):
             return not(eval_(expr))
         
-                
+        
 
         case if_else(expr,et,ef):
             v1 = eval_(expr)
@@ -1301,34 +1284,16 @@ def typecheck(program: AST, environment: Environment = None) -> AST:
         
     raise TypeError()
 
-def test_typecheck():
-    import pytest
-    te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
-    print("te: ",te)
-    assert te.type == NumType()
-    te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
-    print("te: ",te)
-    assert te.type == BoolType()
-    with pytest.raises(TypeError):
-        typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
-
-def run_shell(text):
-    def parse(string):
-        #First, the parse function creates a Stream object from the 
-        # string argument and then creates a Lexer object from the Stream object.
-        #The parse function then creates a Parser object from the Lexer object and calls the parse_expr method on the Parser object.
-        return Parser.parse_expr (
-            Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
-        )
-
-
-    result = []
-    result.append(text)
-    for i, r in enumerate(result):
-        y=parse(r)
-        # print("AST -> ", y)
-        print("Output -> ",eval(y))
-
+# def test_typecheck():
+#     # import pytest
+#     te = typecheck(BinOp("+", NumLiteral(2), NumLiteral(3)))
+#     print("te: ",te)
+#     assert te.type == NumType()
+#     te = typecheck(BinOp("<", NumLiteral(2), NumLiteral(3)))
+#     print("te: ",te)
+#     assert te.type == BoolType()
+#     with pytest.raises(TypeError):
+#         typecheck(BinOp("+", BinOp("*", NumLiteral(2), NumLiteral(3)), BinOp("<", NumLiteral(2), NumLiteral(3))))
 
 def test_parse():
     def parse(string):
@@ -1339,21 +1304,6 @@ def test_parse():
             Parser.from_lexer(Lexer.from_stream(Stream.from_string(string)))
         )
     #10
-
-
-    x=input()
-    print(x)
-    y=parse(x)
-    print("y-> ",y)
-    print("ans-> ", eval(y))
-   
-    
-
-
-
-    # file=open(sys.argv[1],'r')
-
-
     # x=input()
     # print(x)
     # y=parse(x)
@@ -1361,8 +1311,8 @@ def test_parse():
     # print("ans-> ", eval(y))
 
     # start = time.time()
-    file=open(sys.argv[1],'r')
 
+    file=open(sys.argv[1],'r')
     #11
     # x=input()
     # x=file.read()
@@ -1407,6 +1357,9 @@ def test_parse():
         print("y-> ",y)
         print("ans-> ",eval(y))
 
+    # end = time.time()
+    # print(end - start)
+
     # You should parse, evaluate and see whether the expression produces the expected value in your tests.
     # print(parse("if a+b > 2*d then a*b - c + d else e*f/g end"))
     # print(parse("if 10*5 > 6*6 then 10*5 else 6*6 end"))
@@ -1419,13 +1372,9 @@ def test_parse():
     # print(eval(c))
     # code1.eval(parse("if a+b > 2*d then a*b - c + d else e*f/g end"))
 
-
 # test_parse() # Uncomment to see the created ASTs.
-if(len(sys.argv) > 1):
-    print("parse  ",test_parse())
+print("parse  ",test_parse())
 # print(test_typecheck())
-
-
 
 
 # Original defination
@@ -1445,9 +1394,9 @@ if(len(sys.argv) > 1):
 
 
 # Test the operations
-print(is_empty(my_list))   # False
-print(head(my_list))      # NumLiteral(1)
-print(tail(my_list))      # List([NumLiteral(2), NumLiteral(3)])
+# print(is_empty(my_list))   # False
+# print(head(my_list))      # NumLiteral(1)
+# print(tail(my_list))      # List([NumLiteral(2), NumLiteral(3)])
 
 # Input list is empty or not
 # def is_list_empty(list_to_check):
@@ -1720,4 +1669,3 @@ def test_typecheck1():
 # print("test_UBoolOp2(): ",test_UBoolOp2())
 # print("test_typecheck(): ",test_typecheck())
 # print("test_list() ",test_list()) 
-# print("Hello")
