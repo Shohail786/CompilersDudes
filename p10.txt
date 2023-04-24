@@ -1,0 +1,9 @@
+let a is 10 in 
+    if a%2 = 0 then
+        printing "even"
+        end
+    else
+        printing "odd"
+        end
+end
+        
