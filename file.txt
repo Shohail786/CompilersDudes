@@ -27,4 +27,9 @@ seq
     printing finalno end
 end
 }
+{
+    seq 
+        assign n is 5;
+        
+}
 
