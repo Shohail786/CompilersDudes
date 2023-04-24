@@ -1,1 +1,4 @@
-{seq assign a is List [1,3,4]; listappend 4 in a end}
+
+{
+seq assign s is "hello" ; printing reversestr(s) end end
+}

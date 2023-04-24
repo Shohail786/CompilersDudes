@@ -1,49 +1,27 @@
-<<<<<<< HEAD
-=======
+palindrome
+{seq 
+    assign s is "hello";
+    printing vowelnumb(s) end
+end}
 
->>>>>>> 9483194e57d0162c1503c71779bb338afa28e019
+
 {
-seq 
-    assign ans is 1;
-    assign finalno is 1;
-<<<<<<< HEAD
-    assign n is 100000;
-    assign count is 0;
-    assign x is n;
-    assign nn is n;
-    while n>1 do
-=======
-    assign n is 10;
-    assign count is 0;
-    assign x is n;
-    assign nn is n/2;
-    while n>nn do
->>>>>>> 9483194e57d0162c1503c71779bb338afa28e019
+seq
+    assign s is "ao";
+    assign l is strlength(s);
+    assign i is 0;
+    assign output is 0;
+    while i<l do
         seq
-            put n is n-1 end;
-            put count is 0 end;
-            put x is n end;
-            while x>1 do
-                seq 
-<<<<<<< HEAD
-                    if x&1=0 then put x is x/2 end else put x is 3*x + 1 end 
-=======
-                    if x%2=0 then put x is x/2 end else put x is 3*x + 1 end 
->>>>>>> 9483194e57d0162c1503c71779bb338afa28e019
-                    end;
-                    put count is count+1 end
-                end
-            done;
-            if count>ans then seq put ans is count end; put finalno is n end end else put ans is ans end
-            end
+            assign temp is index s[i];
+            if temp = "a" then put output is output +1 end else put output is output end end;
+            if temp = "e" then put output is output +1 end else put output is output end end;
+            if temp = "i" then put output is output +1 end else put output is output end end;
+            if temp = "o" then put output is output +1 end else put output is output end end;
+            if temp = "u" then put output is output +1 end else put output is output end end;
+            put i is i+1 end
         end
     done;
-
-    printing finalno end
+    printing output end
 end
-<<<<<<< HEAD
 }
-=======
-}
-
->>>>>>> 9483194e57d0162c1503c71779bb338afa28e019
