@@ -66,7 +66,7 @@ class EndOfTokens():
 Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens | String
 
 
-keywords = "if then else end while do done let is in letMut letAnd strlength abso reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
+keywords = "if then else end while do done let is in letMut letAnd strlength abso maxi mini reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
 symbolic_operators = "+ - * & / < > ≤ ≥ = ≠ ; , % ( ) [ ]".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
@@ -376,12 +376,30 @@ class Parser:
         #                         break
         return stringlen(b)
     
-    def parse_abso(self):
+    def parse_absval(self):
         self.lexer.match(Keyword("abso"))
         self.lexer.match(Operator("("))
         b = self.parse_expr()
         self.lexer.match(Operator(")"))
-        return abso(b)
+        return absval(b)
+    
+    def parse_maxval(self):
+        self.lexer.match(Keyword("maxi"))
+        self.lexer.match(Operator("("))
+        a = self.parse_expr()
+        self.lexer.match(Operator(","))
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return maxval(a,b)
+    
+    def parse_minval(self):
+        self.lexer.match(Keyword("mini"))
+        self.lexer.match(Operator("("))
+        a = self.parse_expr()
+        self.lexer.match(Operator(","))
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return minval(a,b)    
     
     def parse_popelem(self):
         self.lexer.match(Keyword("popval"))
@@ -646,7 +664,11 @@ class Parser:
             case Keyword("reversestr"):
                 return self.parse_revstring()
             case Keyword("abso"):
-                return self.parse_abso()
+                return self.parse_absval()
+            case Keyword("maxi"):
+                return self.parse_maxval()
+            case Keyword("mini"):
+                return self.parse_minval()            
             case _:
                 return self.parse_simple()
             
@@ -692,11 +714,23 @@ class BinOp:
     right: 'AST'
 
     type: Optional[SimType] = None
-        
+
+@dataclass
 class absval:
     element: 'AST'
     type: Optional[SimType] = None
 
+@dataclass
+class maxval:
+    left: 'AST'
+    right: 'AST'
+    type: Optional[SimType] = None
+
+@dataclass
+class minval:
+    left: 'AST'
+    right: 'AST'
+    type: Optional[SimType] = None 
 
 @dataclass
 class Variable:
@@ -927,7 +961,7 @@ class revstring():
 
 
 
-AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | UnOp | Variable | Let | if_else | LetMut | Put | Get | Assign | Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation | absval
+AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | UnOp | Variable | Let | if_else | LetMut | Put | Get | Assign | Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation | absval | maxval | minval
 # TypedAST = NewType('TypedAST', AST)
 class InvalidProgram(Exception):
     pass
@@ -1027,6 +1061,20 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case absval(element):
             ele = eval_(element)
             return abs(ele)
+        
+        case maxval(left,right):
+            a = eval_(left)
+            b = eval_(right)
+            if a>b:
+                return a
+            return b
+        
+        case minval(left,right):
+            a = eval_(left)
+            b = eval_(right)
+            if a>b:
+                return b
+            return a
 
         case Cons(Variable(name),word):
             # print("hello")
