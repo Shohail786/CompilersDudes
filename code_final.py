@@ -4,6 +4,7 @@ from typing import Optional, NewType
 from typing import List
 import sys
 import time
+import math
 
 # A minimal example to illustrate typechecking.
 
@@ -66,7 +67,7 @@ class EndOfTokens():
 Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens | String
 
 
-keywords = "if then else end while do done let is in letMut letAnd strlength abso maxi mini expo reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
+keywords = "if then else end while do done let is in letMut letAnd strlength abso maxi mini expo ceiling flooring reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
 symbolic_operators = "+ - * & / < > ≤ ≥ = ≠ ; , % ( ) [ ]".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
@@ -383,6 +384,20 @@ class Parser:
         self.lexer.match(Operator(")"))
         return absval(b)
     
+    def parse_floorval(self):
+        self.lexer.match(Keyword("flooring"))
+        self.lexer.match(Operator("("))
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return floorval(b)
+    
+    def parse_ceilval(self):
+        self.lexer.match(Keyword("ceiling"))
+        self.lexer.match(Operator("("))
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return ceilval(b)
+    
     def parse_maxval(self):
         self.lexer.match(Keyword("maxi"))
         self.lexer.match(Operator("("))
@@ -679,7 +694,11 @@ class Parser:
             case Keyword("mini"):
                 return self.parse_minval() 
             case Keyword("expo"):
-                return self.parse_expval()   
+                return self.parse_expval()
+            case Keyword("ceiling"):
+                return self.parse_ceilval()
+            case Keyword("flooring"):
+                return self.parse_floorval()            
             case _:
                 return self.parse_simple()
             
@@ -730,7 +749,17 @@ class BinOp:
 class absval:
     element: 'AST'
     type: Optional[SimType] = None
-
+        
+@dataclass
+class ceilval:
+    element: 'AST'
+    type: Optional[SimType] = None
+        
+@dataclass
+class floorval:
+    element: 'AST'
+    type: Optional[SimType] = None
+        
 @dataclass
 class maxval:
     left: 'AST'
@@ -978,7 +1007,7 @@ class revstring():
 
 
 
-AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | UnOp | Variable | Let | if_else | LetMut | Put | Get | Assign | Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation | absval | maxval | minval
+AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | UnOp | Variable | Let | if_else | LetMut | Put | Get | Assign | Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation | absval | maxval | minval | floorval | ceilval
 # TypedAST = NewType('TypedAST', AST)
 class InvalidProgram(Exception):
     pass
@@ -1097,6 +1126,14 @@ def eval(program: AST, environment: Environment = None) -> Value:
             a = eval_(left)
             b = eval_(right)
             return a**b
+        
+        case ceilval(element):
+            ele = eval_(element)
+            return math.ceil(ele)
+        
+        case floorval(element):
+            ele = eval_(element)
+            return math.floor(ele)
 
         case Cons(Variable(name),word):
             # print("hello")
