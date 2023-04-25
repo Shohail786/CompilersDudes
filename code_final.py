@@ -67,7 +67,7 @@ class EndOfTokens():
 Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens | String
 
 
-keywords = "if then else end while do done let is in letMut letAnd strlength abso maxi mini expo ceiling flooring reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
+keywords = "if then else end while do done let is in letMut letAnd strlength abso maxi mini expo ceiling flooring swapping reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
 symbolic_operators = "+ - * & / < > ≤ ≥ = ≠ ; , % ( ) [ ]".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
@@ -425,6 +425,15 @@ class Parser:
         self.lexer.match(Operator(")"))
         return expval(a,b)
     
+    def parse_swapval(self):
+        self.lexer.match(Keyword("swapping"))
+        self.lexer.match(Operator("("))
+        a = self.parse_expr()
+        self.lexer.match(Operator(","))
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return swapval(a,b)
+    
     def parse_popelem(self):
         self.lexer.match(Keyword("popval"))
         self.lexer.match(Operator("("))
@@ -698,7 +707,9 @@ class Parser:
             case Keyword("ceiling"):
                 return self.parse_ceilval()
             case Keyword("flooring"):
-                return self.parse_floorval()            
+                return self.parse_floorval()       
+            case Keyword("swapping"):
+                return self.parse_swapval()
             case _:
                 return self.parse_simple()
             
@@ -776,8 +787,14 @@ class minval:
 class expval:
     left: 'AST'
     right: 'AST'
+    type: Optional[SimType] = None
+        
+@dataclass
+class swapval:
+    left: 'AST'
+    right: 'AST'
     type: Optional[SimType] = None 
-
+        
 @dataclass
 class Variable:
     name: str
@@ -1007,7 +1024,7 @@ class revstring():
 
 
 
-AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | UnOp | Variable | Let | if_else | LetMut | Put | Get | Assign | Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation | absval | maxval | minval | floorval | ceilval
+AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | UnOp | Variable | Let | if_else | LetMut | Put | Get | Assign | Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation | absval | maxval | minval | floorval | ceilval | expval | swapval
 # TypedAST = NewType('TypedAST', AST)
 class InvalidProgram(Exception):
     pass
@@ -1134,7 +1151,14 @@ def eval(program: AST, environment: Environment = None) -> Value:
         case floorval(element):
             ele = eval_(element)
             return math.floor(ele)
-
+        
+        case swapval(left, right):
+            a = eval_(left)
+            b = eval_(right)
+            tmp = a
+            a = b
+            b = tmp
+            
         case Cons(Variable(name),word):
             # print("hello")
             List1=environment.get(name)
