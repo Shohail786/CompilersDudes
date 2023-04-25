@@ -66,7 +66,7 @@ class EndOfTokens():
 Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens | String
 
 
-keywords = "if then else end while do done let is in letMut letAnd strlength reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
+keywords = "if then else end while do done let is in letMut letAnd strlength abso reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
 symbolic_operators = "+ - * & / < > ≤ ≥ = ≠ ; , % ( ) [ ]".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
@@ -376,6 +376,13 @@ class Parser:
         #                         break
         return stringlen(b)
     
+    def parse_abso(self):
+        self.lexer.match(Keyword("abso"))
+        self.lexer.match(Operator("("))
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return abso(b)
+    
     def parse_popelem(self):
         self.lexer.match(Keyword("popval"))
         self.lexer.match(Operator("("))
@@ -638,6 +645,8 @@ class Parser:
                 return self.parse_stringindex()
             case Keyword("reversestr"):
                 return self.parse_revstring()
+            case Keyword("abso"):
+                return self.parse_abso()
             case _:
                 return self.parse_simple()
             
@@ -682,6 +691,10 @@ class BinOp:
     left: 'AST'
     right: 'AST'
 
+    type: Optional[SimType] = None
+        
+class absval:
+    element: 'AST'
     type: Optional[SimType] = None
 
 
@@ -914,7 +927,7 @@ class revstring():
 
 
 
-AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | Variable | Let | if_else | LetMut | Put | Get | Assign |Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation
+AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | UnOp | Variable | Let | if_else | LetMut | Put | Get | Assign | Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation | absval
 # TypedAST = NewType('TypedAST', AST)
 class InvalidProgram(Exception):
     pass
@@ -1010,6 +1023,10 @@ def eval(program: AST, environment: Environment = None) -> Value:
                 if(ele=='a' or ele=='e' or ele=='i' or ele=='o' or ele=='u'):
                     count = count +1
             return count
+        
+        case absval(element):
+            ele = eval_(element)
+            return abs(ele)
 
         case Cons(Variable(name),word):
             # print("hello")
