@@ -66,7 +66,7 @@ class EndOfTokens():
 Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens | String
 
 
-keywords = "if then else end while do done let is in letMut letAnd strlength abso maxi mini reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
+keywords = "if then else end while do done let is in letMut letAnd strlength abso maxi mini expo reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
 symbolic_operators = "+ - * & / < > ≤ ≥ = ≠ ; , % ( ) [ ]".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
@@ -401,6 +401,15 @@ class Parser:
         self.lexer.match(Operator(")"))
         return minval(a,b)    
     
+    def parse_expval(self):
+        self.lexer.match(Keyword("expo"))
+        self.lexer.match(Operator("("))
+        a = self.parse_expr()
+        self.lexer.match(Operator(","))
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return expval(a,b)
+    
     def parse_popelem(self):
         self.lexer.match(Keyword("popval"))
         self.lexer.match(Operator("("))
@@ -668,7 +677,9 @@ class Parser:
             case Keyword("maxi"):
                 return self.parse_maxval()
             case Keyword("mini"):
-                return self.parse_minval()            
+                return self.parse_minval() 
+            case Keyword("expo"):
+                return self.parse_expval()   
             case _:
                 return self.parse_simple()
             
@@ -728,6 +739,12 @@ class maxval:
 
 @dataclass
 class minval:
+    left: 'AST'
+    right: 'AST'
+    type: Optional[SimType] = None 
+        
+@dataclass
+class expval:
     left: 'AST'
     right: 'AST'
     type: Optional[SimType] = None 
@@ -1075,6 +1092,11 @@ def eval(program: AST, environment: Environment = None) -> Value:
             if a>b:
                 return b
             return a
+        
+        case expval(left,right):
+            a = eval_(left)
+            b = eval_(right)
+            return a**b
 
         case Cons(Variable(name),word):
             # print("hello")
