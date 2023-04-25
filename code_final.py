@@ -67,7 +67,7 @@ class EndOfTokens():
 Token = Num | Bool | Keyword | Identifier | Operator | EndOfTokens | String
 
 
-keywords = "if then else end while do done let is in letMut letAnd strlength abso maxi mini expo ceiling flooring sqrting swapping reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
+keywords = "if then else end while do done let is in letMut letAnd strlength abso maxi mini expo ceiling flooring sqrting swapping toUpper toLower reversestr vowelnumb stringidx of popval seq anth put get  printing for ubool func funCall assign slice List listappend start stop".split()
 symbolic_operators = "+ - * & / < > ≤ ≥ = ≠ ; , % ( ) [ ]".split()
 word_operators = "and or not quot rem".split()
 whitespace = " \t\n"
@@ -441,6 +441,20 @@ class Parser:
         self.lexer.match(Operator(")"))
         return swapval(a,b)
     
+    def parse_toUpperVal(self):
+        self.lexer.match(Keyword("toUpper"))
+        self.lexer.match(Operator("("))
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return toUpperVal(b)
+    
+    def parse_toLowerVal(self):
+        self.lexer.match(Keyword("toLower"))
+        self.lexer.match(Operator("("))
+        b = self.parse_expr()
+        self.lexer.match(Operator(")"))
+        return toLowerVal(b)
+    
     def parse_popelem(self):
         self.lexer.match(Keyword("popval"))
         self.lexer.match(Operator("("))
@@ -719,6 +733,10 @@ class Parser:
                 return self.parse_sqrtval()
             case Keyword("swapping"):
                 return self.parse_swapval()
+            case Keyword("toUpper"):
+                return self.parse_toUpperVal()
+            case Keyword("toLower")"
+                return self.parse_toLowerVal()
             case _:
                 return self.parse_simple()
             
@@ -809,6 +827,16 @@ class swapval:
     right: 'AST'
     type: Optional[SimType] = None 
         
+@dataclass
+class toUpperVal:
+    element: 'AST'
+    type: Optional[SimType] = None
+        
+@dataclass
+class toLowerVal:
+    element: 'AST'
+    type: Optional[SimType] = None
+
 @dataclass
 class Variable:
     name: str
@@ -1038,7 +1066,7 @@ class revstring():
 
 
 
-AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | UnOp | Variable | Let | if_else | LetMut | Put | Get | Assign | Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation | absval | maxval | minval | floorval | ceilval | sqrtval | expval | swapval
+AST = NumLiteral | BoolLiteral | StringLiteral | stringindex | revstring | vowelcount | ListLiteral | popelem | stringlen | Cons | BinOp | UnOp | Variable | Let | if_else | LetMut | Put | Get | Assign | Seq | Print | while_loop | FunCall | StringLiteral | UBoolOp | LetAnd | Str_slicing | Two_Str_concatenation | absval | maxval | minval | floorval | ceilval | sqrtval | expval | swapval | toUpperVal | toLowerVal 
 # TypedAST = NewType('TypedAST', AST)
 class InvalidProgram(Exception):
     pass
@@ -1176,6 +1204,14 @@ def eval(program: AST, environment: Environment = None) -> Value:
             tmp = a
             a = b
             b = tmp
+            
+        case toUpperVal(element):
+            ele = eval_(element)
+            return ele.upper()
+        
+        case toLowerVal(element):
+            ele = eval_(element)
+            return ele.lower()
             
         case Cons(Variable(name),word):
             # print("hello")
